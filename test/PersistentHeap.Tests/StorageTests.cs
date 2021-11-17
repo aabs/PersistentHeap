@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using IndustrialInference.PersistentHeap;
 
@@ -47,6 +48,30 @@ public class StorageTests
     {
         const int size = 32;
         var sut = new ByteStorage(size);
+        for (int i = 0; i < 32; i++)
+        {
+            sut[i] = Convert.ToByte(i);
+        }
         var actual = sut[2..4];
+        sut[2].Should().Be(0x2);
+        sut[1..3] = actual;
+        sut[2].Should().Be(0x3);
+    }
+
+    [TestMethod]
+    public void CanOverwriteUsingRangeNotation()
+    {
+        const int size = 32;
+        var sut = new ByteStorage(size);
+        for (int i = 0; i < 32; i++)
+        {
+            sut[i] = Convert.ToByte(i);
+        }
+        var actual = sut[20..^4]; // i.e. 20,21,22,23,24,25,26,27
+        actual[0].Should().Be(20);
+        actual.Length.Should().Be(8);
+        sut[..] = actual;
+        sut[0].Should().Be(20);
+        sut[8].Should().Be(0x8);
     }
 }
