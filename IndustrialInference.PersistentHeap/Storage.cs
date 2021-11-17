@@ -17,21 +17,48 @@ public class StorageProvider
 
 public interface IStorage
 {
-
+    byte[] Buf { get; }
+    byte this[int i] { get; set; }
+    byte this[Index i] { get; set; }
+    byte[] this[Range i] { get; set; }
 }
 
 public class ByteStorage : IStorage
 {
-    private readonly byte[] _data;
     public ByteStorage(int size)
     {
         if (0 < size && size <= MaxBufferSize)
         {
-            _data = new byte[size];
+            Buf = new byte[size];
         }
     }
 
     private const int MaxBufferSize = 1 << 16;
 
-    public byte[] Buf => _data;
+    public byte[] Buf { get; }
+
+    public byte[] this[Range i]
+    {
+        get => Buf[i];
+        set
+        {
+            if (i.Start.Value + value.Length > Buf.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value));
+            }
+            Array.Copy(value, 0, Buf, i.Start.Value, value.Length);
+        }
+    }
+
+    public byte this[int i]
+    {
+        get => Buf[i];
+        set => Buf[i] = value;
+    }
+
+    public byte this[Index i]
+    {
+        get => Buf[i];
+        set => Buf[i] = value;
+    }
 }
