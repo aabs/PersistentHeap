@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IndustrialInference.PersistentHeap", "IndustrialInference.PersistentHeap\IndustrialInference.PersistentHeap.csproj", "{2D127A94-89BD-447C-9027-8B6A399F61DD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IndustrialInference.BPlusTree", "IndustrialInference.PersistentHeap\IndustrialInference.BPlusTree.csproj", "{2D127A94-89BD-447C-9027-8B6A399F61DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistentHeap.Tests", "test\PersistentHeap.Tests\PersistentHeap.Tests.csproj", "{51D98403-6257-4948-B015-B6043D49A3A9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistentHeap.Tests", "test\PersistentHeap.Tests\PersistentHeap.Tests.csproj", "{51D98403-6257-4948-B015-B6043D49A3A9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "test\Benchmarks\Benchmarks.csproj", "{2057C0F0-5D4D-4B39-938F-7E68F6515836}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{51D98403-6257-4948-B015-B6043D49A3A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51D98403-6257-4948-B015-B6043D49A3A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51D98403-6257-4948-B015-B6043D49A3A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2057C0F0-5D4D-4B39-938F-7E68F6515836}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2057C0F0-5D4D-4B39-938F-7E68F6515836}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2057C0F0-5D4D-4B39-938F-7E68F6515836}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2057C0F0-5D4D-4B39-938F-7E68F6515836}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,11 +5,17 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
+    <PackageReference Include="DotNext.IO" Version="4.1.0" />
+    <PackageReference Include="DotNext.Unsafe" Version="4.1.0" />
     <PackageReference Include="FluentAssertions" Version="6.2.0" />
     <PackageReference Include="FluentAssertions.Analyzers" Version="0.13.0" />
+    <PackageReference Include="LightningDB" Version="0.14.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
     <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
@@ -17,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\IndustrialInference.PersistentHeap\IndustrialInference.PersistentHeap.csproj" />
+    <ProjectReference Include="..\..\IndustrialInference.PersistentHeap\IndustrialInference.BPlusTree.csproj" />
   </ItemGroup>
 
 </Project>
