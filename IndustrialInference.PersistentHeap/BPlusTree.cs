@@ -5,67 +5,6 @@ public static class Constants
     public const long MaxNodeSize = 10;
 }
 
-public class Node
-{
-    public Node()
-    {
-        IsLeaf = true;
-    }
-
-    public Node(long[] keys) : this()
-    {
-        Array.Copy(keys, K, keys.Length);
-        IsLeaf = true;
-        KeysInUse = keys.Count();
-    }
-
-    public Node(long[] keys, long[] pointers) : this(keys)
-    {
-        Array.Copy(pointers, P, pointers.Length);
-        IsLeaf = false;
-    }
-
-    public bool IsEmpty => KeysInUse == 0;
-    public bool IsFull => KeysInUse == Constants.MaxNodeSize;
-    public bool IsLeaf { get; init; }
-    public long[] K { get; set; } = new long[Constants.MaxNodeSize - 1];
-
-    // another namer to use in case of non-leaf nodes
-    public long KeysInUse { get; set; }
-
-    public long[] P { get; set; } = new long[Constants.MaxNodeSize];
-
-    public void Insert(long k, long r)
-    {
-        if (KeysInUse == 0)
-        {
-            K[0] = k;
-            P[0] = r;
-            KeysInUse++;
-            return;
-        }
-        int insertionPoint = 0;
-        while (insertionPoint < KeysInUse && K[insertionPoint] < k)
-        {
-            insertionPoint++;
-        }
-
-        var nK = new long[Constants.MaxNodeSize - 1];
-        var nP = new long[Constants.MaxNodeSize];
-
-        Array.Copy(K, nK, insertionPoint);
-        Array.Copy(P, nP, insertionPoint);
-        nK[insertionPoint] = k;
-        nP[insertionPoint] = r;
-        Array.Copy(K, insertionPoint, nK, insertionPoint + 1, Constants.MaxNodeSize - insertionPoint - 2);
-        Array.Copy(P, insertionPoint, nP, insertionPoint + 1, Constants.MaxNodeSize - insertionPoint - 1);
-
-        K = nK;
-        P = nP;
-        KeysInUse++;
-    }
-}
-
 public class BPlusTree
 {
     public BPlusTree()
@@ -144,7 +83,7 @@ public class BPlusTree
     private long Split(Node n, long newKey)
     => n.IsLeaf switch
     {
-        true => SplitLeafNode(n, newKey),
+        true => SplitLeafNode(n, newKey, newKey),
         false => SplitInternalNode(n, newKey)
     };
 
@@ -192,4 +131,65 @@ public class BPlusTree
      * [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
      *
      */
+}
+
+public class Node
+{
+    public Node()
+    {
+        IsLeaf = true;
+    }
+
+    public Node(long[] keys) : this()
+    {
+        Array.Copy(keys, K, keys.Length);
+        IsLeaf = true;
+        KeysInUse = keys.Count();
+    }
+
+    public Node(long[] keys, long[] pointers) : this(keys)
+    {
+        Array.Copy(pointers, P, pointers.Length);
+        IsLeaf = false;
+    }
+
+    public bool IsEmpty => KeysInUse == 0;
+    public bool IsFull => KeysInUse == Constants.MaxNodeSize;
+    public bool IsLeaf { get; init; }
+    public long[] K { get; set; } = new long[Constants.MaxNodeSize - 1];
+
+    // another namer to use in case of non-leaf nodes
+    public long KeysInUse { get; set; }
+
+    public long[] P { get; set; } = new long[Constants.MaxNodeSize];
+
+    public void Insert(long k, long r)
+    {
+        if (KeysInUse == 0)
+        {
+            K[0] = k;
+            P[0] = r;
+            KeysInUse++;
+            return;
+        }
+        int insertionPoint = 0;
+        while (insertionPoint < KeysInUse && K[insertionPoint] < k)
+        {
+            insertionPoint++;
+        }
+
+        var nK = new long[Constants.MaxNodeSize - 1];
+        var nP = new long[Constants.MaxNodeSize];
+
+        Array.Copy(K, nK, insertionPoint);
+        Array.Copy(P, nP, insertionPoint);
+        nK[insertionPoint] = k;
+        nP[insertionPoint] = r;
+        Array.Copy(K, insertionPoint, nK, insertionPoint + 1, Constants.MaxNodeSize - insertionPoint - 2);
+        Array.Copy(P, insertionPoint, nP, insertionPoint + 1, Constants.MaxNodeSize - insertionPoint - 1);
+
+        K = nK;
+        P = nP;
+        KeysInUse++;
+    }
 }
