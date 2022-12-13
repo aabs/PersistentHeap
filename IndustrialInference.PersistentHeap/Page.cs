@@ -9,8 +9,6 @@ public class Page<TKey> where TKey : IComparable<TKey>
     /// <summary>
     /// How much space in this page
     /// </summary>
-    public const int PageSize = 4;
-
     private readonly PageManager<TKey> pageManager;
 
     /// <summary>
@@ -22,24 +20,22 @@ public class Page<TKey> where TKey : IComparable<TKey>
     /// Create the page, init storage, and start tracking usage
     /// </summary>
     /// <param name="isExternal">is this a leaf node (or is it a container of references to pages)</param>
-    public Page(bool isExternal, int location, PageManager<TKey> pageManager)
+    public Page(bool isExternal, int location, PageManager<TKey> pageManager, PageOptions? options)
     {
         IsExternal = isExternal;
         Location = location;
         this.pageManager = pageManager;
-        Body = new KeyPtr<TKey>[PageSize];
+        Options = options ?? PageOptions.Default;
+        Body = new KeyPtr<TKey>[Options.PageSize];
         Entries = 0;
-        AllowDuplicates = false;
     }
-
-    public bool AllowDuplicates { get; set; }
 
     /// <summary>
     /// Is the page a container for references (false) or for data (true)?
     /// </summary>
     public bool IsExternal { get; }
 
-    public bool IsFull => Entries == PageSize;
+    public bool IsFull => Entries == Options.PageSize;
 
     /// <summary>
     /// Ket the keys of the entries in the page
@@ -56,6 +52,7 @@ public class Page<TKey> where TKey : IComparable<TKey>
     }
 
     public int Location { get; set; }
+    public PageOptions? Options { get; }
 
     /// <summary>
     /// The actual data stored in the page
@@ -71,7 +68,7 @@ public class Page<TKey> where TKey : IComparable<TKey>
     {
         Debug.Assert(IsExternal);
         if (IsFull) throw new ApplicationException("cannot add entry to full page");
-        if (AllowDuplicates && Contains(key.Key))
+        if (Options.AllowDuplicates && Contains(key.Key))
         {
             return;
         }
@@ -162,4 +159,11 @@ public class Page<TKey> where TKey : IComparable<TKey>
     {
         return Comparer<TKey>.Default.Compare(l, r);
     }
+}
+
+public class PageOptions
+{
+    public static PageOptions Default => new PageOptions { AllowDuplicates = false, PageSize = 1 << 20 };
+    public bool AllowDuplicates { get; set; }
+    public int PageSize { get; set; }
 }

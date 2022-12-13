@@ -2,6 +2,8 @@
 
 public interface IPageManager<TKey> where TKey : IComparable<TKey>
 {
+    PageOptions Options { get; }
+
     int Add(Page<TKey> page);
 
     Page<TKey> CreatePage(bool isExternal);
@@ -12,12 +14,14 @@ public interface IPageManager<TKey> where TKey : IComparable<TKey>
 public class PageManager<TKey> : IPageManager<TKey> where TKey : IComparable<TKey>
 
 {
-    public PageManager()
+    public PageManager(PageOptions? options)
     {
+        Options = options ?? PageOptions.Default;
         Body = new List<Page<TKey>>();
     }
 
     public List<Page<TKey>> Body { get; }
+    public PageOptions Options { get; private set; }
 
     public int Add(Page<TKey> page)
     {
@@ -27,7 +31,7 @@ public class PageManager<TKey> : IPageManager<TKey> where TKey : IComparable<TKe
 
     public Page<TKey> CreatePage(bool isExternal)
     {
-        var p = new Page<TKey>(isExternal, -1, this);
+        var p = new Page<TKey>(isExternal, -1, this, Options);
         p.Location = Add(p);
         return p;
     }
