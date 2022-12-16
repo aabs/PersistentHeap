@@ -1,14 +1,16 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using FluentAssertions;
+using IndustrialInference.BPlusTree;
 
 namespace PersistentHeap.Tests;
 
-[TestClass, TestCategory("B+Tree")]
+[TestFixture, Category("B+Tree")]
 public class BTreeSetTests
 {
     public PageManager<int> PageManager { get; set; }
 
-    [TestMethod, TestCategory("Slow")]
+    [Test, Category("Slow"), Ignore("too slow")]
     public void CanAddLargeNumbersOfElements()
     {
         var sw = new Stopwatch(); sw.Start();
@@ -25,7 +27,7 @@ public class BTreeSetTests
         Console.WriteLine($"time: {sw.Elapsed:t}");
     }
 
-    [TestMethod]
+    [Test]
     public void CanAddOne()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -37,14 +39,14 @@ public class BTreeSetTests
         sut.Contains(unexpected).Should().BeFalse();
     }
 
-    [TestMethod]
+    [Test]
     public void CanCheckEmptyTreeForContains()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
         sut.Contains(23).Should().BeFalse();
     }
 
-    [TestMethod]
+    [Test]
     public void CanCheckForPresentElement()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -53,7 +55,7 @@ public class BTreeSetTests
         sut.Contains(23).Should().BeTrue();
     }
 
-    [TestMethod]
+    [Test]
     public void CanSplitOnOverflow()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -68,7 +70,7 @@ public class BTreeSetTests
         sut.Add(new KeyPtr<int>(44, default));
     }
 
-    [TestInitialize]
+    [SetUp]
     public void SetUp()
     {
         var opts = new PageOptions { AllowDuplicates = false, PageSize = 4 };

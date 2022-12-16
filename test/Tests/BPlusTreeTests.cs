@@ -1,14 +1,13 @@
-﻿using System;
-
 namespace PersistentHeap.Tests;
+using System;
 
-[TestClass]
+[TestFixture]
 public class BPlusTreeTests
 {
-    [TestMethod]
-    [DataRow(1, 2, 3)]
-    [DataRow(1, 3, 2)]
-    [DataRow(3, 2, 1)]
+    [Test]
+    [TestCase(1, 2, 3)]
+    [TestCase(1, 3, 2)]
+    [TestCase(3, 2, 1)]
     public void CanAdd(params int[] items)
     {
         var sut = new BPlusTree();
@@ -18,26 +17,26 @@ public class BPlusTreeTests
         }
     }
 
-    [TestMethod]
+    [Test]
     public void CanAddOne()
     {
         var sut = new BPlusTree();
         sut.Insert(5, 123);
     }
 
-    [TestMethod]
+    [Test]
     public void CanCreateANode()
     {
         var sut = new BPlusTree();
         sut.Should().NotBeNull();
     }
 
-    [TestMethod]
+    [Test]
     public void OverflowSingleNodeWithRandomNumbers()
     {
         var r = new Random();
         var sut = new BPlusTree();
-        for (int i = 0; i < Constants.MaxNodeSize * 2; i++)
+        for (var i = 0; i < Constants.MaxNodeSize * 2; i++)
         {
             sut.Insert(r.Next(), r.Next());
         }

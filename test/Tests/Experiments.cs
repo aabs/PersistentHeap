@@ -1,4 +1,4 @@
-﻿using IndustrialInference.PersistentHeap.Old;
+using IndustrialInference.PersistentHeap.Old;
 using LightningDB;
 using System;
 using System.IO;
@@ -9,16 +9,16 @@ using System.Text;
 
 namespace PersistentHeap.Tests;
 
-[TestClass]
+[TestFixture]
 public class Experiments
 {
-    [TestMethod]
+    [Test]
     public void ArraySegmentTest()
     {
         var buf = new Memory<ulong>(new ulong[32]);
     }
 
-    [TestMethod]
+    [Test]
     public void CreateAndUseLightningDb()
     {
         using (var env = new LightningEnvironment("pathtofolder"))
@@ -41,7 +41,7 @@ public class Experiments
         }
     }
 
-    [TestMethod]
+    [Test]
     public void GetAndSetPageViaLDB()
     {
         var r = new Random(29);
@@ -71,7 +71,7 @@ public class Experiments
         }
     }
 
-    [TestMethod]
+    [Test]
     public void MemoryOverArrayOfBytesTest()
     {
         var buf = new byte[1024];
@@ -83,7 +83,7 @@ public class Experiments
         buf[1].Should().Be(0x2);
     }
 
-    [TestMethod]
+    [Test]
     public void TestCreationAndCastingOfMemorys()
     {
         Memory<byte> span = new byte[1024];
@@ -95,7 +95,7 @@ public class Experiments
         foreach (var j in sliceint2) Console.WriteLine(j);
     }
 
-    [TestMethod]
+    [Test]
     public void TestCreationAndCastingOfSpans()
     {
         Span<byte> span = stackalloc byte[1024];
@@ -107,7 +107,7 @@ public class Experiments
         foreach (var j in sliceint2) Console.WriteLine(j);
     }
 
-    [TestMethod]
+    [Test]
     public void TestFileExpansionTest()
     {
         var r = new Random();
@@ -152,7 +152,9 @@ public class Experiments
 
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
+#pragma warning disable SYSLIB0011 // Type or member is obsolete
         bf.Serialize(ms, obj);
+#pragma warning restore SYSLIB0011 // Type or member is obsolete
 
         return new ReadOnlySpan<byte>(ms.ToArray());
     }

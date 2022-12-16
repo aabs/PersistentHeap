@@ -1,4 +1,4 @@
-﻿using DotNext.IO.MemoryMappedFiles;
+using DotNext.IO.MemoryMappedFiles;
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 
 namespace PersistentHeap.Tests;
 
-[TestClass]
+[TestFixture]
 public class MemoryMappedFilesTests
 {
-    [TestMethod]
+    [Test]
     public void CreateAndWriteToMMF()
     {
         var filename = Path.GetTempFileName();
@@ -42,7 +42,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [TestMethod]
+    [Test]
     public void CreateAndWriteToMMFWithoutFlush()
     {
         var filename = Path.GetTempFileName();
@@ -74,7 +74,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [TestMethod]
+    [Test]
     public void AccessMemoryMappedFileUsingMemoryOfT()
     {
         var filename = Path.GetTempFileName();
@@ -102,7 +102,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [TestMethod]
+    [Test, Ignore("interactive")]
     public void Test2()
     {
         // create a memory-mapped file of length 1000 bytes and give it a 'map name' of 'test'  
