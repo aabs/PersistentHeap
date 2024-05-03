@@ -1,4 +1,4 @@
-﻿namespace IndustrialInference.BPlusTree;
+namespace IndustrialInference.BPlusTree;
 
 public class BPlusTree
 {
@@ -121,4 +121,5 @@ public class BPlusTree
      * [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
      *
      */
+    public int Count() => (int)this.Nodes.Where(n => n.IsLeaf).Sum(n => n.KeysInUse);
 }

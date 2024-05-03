@@ -1,44 +1,59 @@
 namespace PersistentHeap.Tests;
 using System;
+using DotNext.Text;
 
-[TestFixture]
+
+
 public class BPlusTreeTests
 {
-    [Test]
-    [TestCase(1, 2, 3)]
-    [TestCase(1, 3, 2)]
-    [TestCase(3, 2, 1)]
-    public void CanAdd(params int[] items)
+    [Fact]
+    public void can_add_any_number_of_items_to_tree()
     {
-        var sut = new BPlusTree();
-        foreach (var i in items)
-        {
-            sut.Insert(i, 123);
-        }
+        Prop.ForAll<int[]>(xs =>
+            {
+                var sut = new BPlusTree();
+                foreach (var i in xs)
+                {
+                    sut.Insert(i, 123);
+                }
+
+                var result = sut.Count() == xs.Distinct().Count();
+                return result;
+            })
+            .QuickCheckThrowOnFailure();
     }
 
-    [Test]
-    public void CanAddOne()
+    [Fact]
+    public void can_add_any_integer_to_tree()
     {
-        var sut = new BPlusTree();
-        sut.Insert(5, 123);
+        Prop.ForAll<int>(i =>
+            {
+                var sut = new BPlusTree();
+                sut.Insert(i, i);
+                return sut.Count() == 1;
+            })
+            .QuickCheckThrowOnFailure();
     }
 
-    [Test]
-    public void CanCreateANode()
+    [Fact]
+    public void can_create_a_node()
     {
         var sut = new BPlusTree();
         sut.Should().NotBeNull();
     }
 
-    [Test]
+    [Fact]
     public void OverflowSingleNodeWithRandomNumbers()
     {
-        var r = new Random();
-        var sut = new BPlusTree();
-        for (var i = 0; i < Constants.MaxNodeSize * 2; i++)
+        Assert.Throws<OverfullNodeException>(() =>
         {
-            sut.Insert(r.Next(), r.Next());
-        }
+            var sut = new BPlusTree();
+            var r = new Random();
+            for (var i = 0; i < Constants.MaxNodeSize * 2; i++)
+            {
+                sut.Insert(r.Next(), i);
+            }
+        });
+
     }
 }

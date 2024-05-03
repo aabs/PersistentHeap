@@ -1,26 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <RootNamespace>PersistentHeap.Tests</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="DotNext.Unsafe" Version="4.8.1" />
     <PackageReference Include="FluentAssertions" Version="6.8.0" />
+    <PackageReference Include="FsCheck.Xunit" Version="2.16.6" />
     <PackageReference Include="LightningDB" Version="0.14.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
-    <PackageReference Include="NUnit" Version="3.13.3" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
-    <PackageReference Include="NUnit.Analyzers" Version="3.3.0" />
     <PackageReference Include="coverlet.collector" Version="3.1.2" />
+    <PackageReference Include="StructPacker" Version="1.0.8" />
+    <PackageReference Include="xunit" Version="2.8.0" />
+    <PackageReference Include="xunit.analyzers" Version="1.13.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\IndustrialInference.PersistentHeap\IndustrialInference.BPlusTree.csproj" />
   </ItemGroup>
-
 </Project>
