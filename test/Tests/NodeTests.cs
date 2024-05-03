@@ -5,7 +5,6 @@ using Random = System.Random;
 
 public class NodePropertyTests
 {
-    // Adding a key to a node that already contains it doesn't add anything
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_a_key_to_a_node_that_already_contains_it_does_not_add_anything(int[] xs)
     {
@@ -22,7 +21,6 @@ public class NodePropertyTests
         expected.Should().Be(actual);
     }
 
-    // Adding a key to a non-empty node adds it
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_a_new_key_to_a_non_full_node_increases_keys_by_one(int[] xs)
     {
@@ -39,7 +37,6 @@ public class NodePropertyTests
         sut.Count.Should().Be(xs.Distinct().Count());
     }
 
-    // invariant - adding keys to a node leaves the node keys in order
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_keys_to_a_node_leaves_the_node_keys_in_order(int[] xs)
     {
@@ -54,7 +51,6 @@ public class NodePropertyTests
         expected.Should().BeEquivalentTo(actual);
     }
 
-    // removing a key from a node reduces the number of keys by 1
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void removing_a_key_from_a_node_reduces_the_number_of_keys_by_one(int[] xs)
     {
@@ -70,9 +66,39 @@ public class NodePropertyTests
         expected.Should().Be(actual);
     }
 
-    // removing a key from a node leaves the keys in order
+    [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    public void removing_a_key_from_a_node_leaves_the_node_keys_in_order(int[] xs)
+    {
+        var sut = new Node();
+        foreach (var i in xs)
+        {
+            sut.Insert(i, 123, overwriteOnEquality: true);
+        }
 
+        if (xs.Length == 0 || sut.Count == 0)
+        {
+            return;
+        }
+        sut.Delete(xs[0]);
+
+        var a = sut.K[..(int)sut.Count];
+        var b = a.OrderBy(x => x);
+        for (int i = 0; i < (int)sut.Count; i++)
+        {
+            a[i].Should().Be(b.ElementAt(i));
+        }
+    }
+
+    [Fact]
+    public void removing_an_element_from_an_empty_node_changes_nothing()
+    {
+        var sut = new Node();
+        sut.Count.Should().Be(0);
+        sut.Delete(123);
+        sut.Count.Should().Be(0);
+    }
 }
+
 public static class IntArrayArbitrary
 {
     public static Arbitrary<int[]> Values()
