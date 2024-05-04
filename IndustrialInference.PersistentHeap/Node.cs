@@ -1,7 +1,5 @@
 namespace IndustrialInference.BPlusTree;
 
-using System.Reflection;
-
 public class Node
 {
     public Node() => IsLeaf = true;
@@ -19,15 +17,47 @@ public class Node
         IsLeaf = false;
     }
 
+    public long Count => KeysInUse;
     public bool IsEmpty => KeysInUse == 0;
     public bool IsFull => KeysInUse == Constants.MaxNodeSize;
     public bool IsLeaf { get; init; }
     public long[] K { get; set; } = new long[Constants.MaxNodeSize - 1];
-
-    // another namer to use in case of non-leaf nodes
     public long KeysInUse { get; set; }
-    public long Count => KeysInUse;
     public long[] P { get; set; } = new long[Constants.MaxNodeSize];
+    public bool IsDeleted { get; set; }
+
+    public void Delete(long k)
+    {
+        var index = Array.IndexOf(K, k);
+
+        if (index == -1)
+        {
+            return;
+        }
+
+        if (index + 1 == Constants.MaxNodeSize)
+        {
+            // if we are here, it means that we have found the desired key, and it is the very last
+            // element of a full node, so the only work required is to erase the last elements of K
+            // and P
+            K[index] = default;
+            P[index] = P[index + 1];
+            P[index + 1] = default;
+            KeysInUse--;
+            return;
+        }
+
+        for (var i = index + 1; i < KeysInUse; i++)
+        {
+            K[i - 1] = K[i];
+            P[i - 1] = P[i];
+        }
+
+        K[KeysInUse] = default;
+        P[KeysInUse] = P[KeysInUse + 1];
+        P[KeysInUse + 1] = default;
+        KeysInUse--;
+    }
 
     public void Insert(long k, long r, bool overwriteOnEquality = true)
     {
@@ -59,17 +89,16 @@ public class Node
         {
             if (insertionPoint >= KeysInUse)
             {
-                // if we get here, we have a value that is identical to the
-                // default value the node keys are initialised to, but we are
-                // writing beyond the end of the area currently in use, so we
-                // need to insert as usual (incrementing keys in use etc.)
+                // if we get here, we have a value that is identical to the default value the node
+                // keys are initialised to, but we are writing beyond the end of the area currently
+                // in use, so we need to insert as usual (incrementing keys in use etc.)
                 K[insertionPoint] = k;
                 P[insertionPoint] = r;
                 KeysInUse++;
                 return;
             }
 
-            // we have a match.  Overwrite if allowed to.
+            // we have a match. Overwrite if allowed to.
             if (overwriteOnEquality)
             {
                 P[insertionPoint] = r;
@@ -91,38 +120,5 @@ public class Node
         K[insertionPoint] = k;
         P[insertionPoint] = r;
         KeysInUse++;
-    }
-
-    public void Delete(long k)
-    {
-        var index = Array.IndexOf(K, k);
-
-        if (index == -1)
-        {
-            return;
-        }
-        var originalKeysInUse = KeysInUse;
-        if (index+1 == Constants.MaxNodeSize)
-        {
-            // if we are here, it means that we have found the desired key, and
-            // it is the very last element of a full node, so the only work
-            // required is to erase the last elements of K and P
-            K[index] = default;
-            P[index] = P[index + 1];
-            P[index+1] = default;
-            KeysInUse--;
-            return;
-        }
-        for (var i = index+1; i < KeysInUse; i++)
-        {
-            K[i-1] = K[i];
-            P[i-1] = P[i];
-        }
-
-        K[KeysInUse] = default;
-        P[KeysInUse] = P[KeysInUse+1];
-        P[KeysInUse+1] = default;
-        KeysInUse--;
-
     }
 }
