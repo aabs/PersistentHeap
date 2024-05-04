@@ -97,6 +97,21 @@ public class NodePropertyTests
         sut.Delete(123);
         sut.Count.Should().Be(0);
     }
+
+    [Property(Arbitrary = [typeof(IntArrayOfUniqueValuesArbitrary)])]
+    public void any_key_in_a_node_will_always_be_found_by_contains(int[] xs)
+    {
+        var sut = new Node();
+        for (int i = 0; i < xs.Length; i++)
+        {
+            sut.Insert(xs[i], xs[i]);
+        }
+
+        foreach (var x in xs)
+        {
+            sut.ContainsKey(x).Should().BeTrue();
+        }
+    }
 }
 
 public static class IntArrayArbitrary
@@ -105,5 +120,15 @@ public static class IntArrayArbitrary
     {
         var size = Random.Shared.Next(2, (int)Constants.MaxNodeSize);
         return Arb.Generate<int>().ArrayOf(size).ToArbitrary();
+    }
+}
+public static class IntArrayOfUniqueValuesArbitrary
+{
+    public static Arbitrary<int[]> Values()
+    {
+        var size = Random.Shared.Next(2, (int)Constants.MaxNodeSize);
+        var result = Enumerable.Range(0, size).ToArray();
+        Random.Shared.Shuffle(result);
+        return Gen.Constant(result).ToArbitrary();
     }
 }

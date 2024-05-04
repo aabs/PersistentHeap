@@ -61,7 +61,12 @@ public class Node
 
     public void Insert(long k, long r, bool overwriteOnEquality = true)
     {
-        if (KeysInUse == Constants.MaxNodeSize - 1)
+        var knownKey = ContainsKey(k);
+        if (knownKey && !overwriteOnEquality)
+        {
+            throw new BPlusTreeException("Key already exists in node and overwrite is not allowed");
+        }
+        if (!knownKey && KeysInUse == Constants.MaxNodeSize - 1)
         {
             OverfullNodeException.Throw("Node is full");
         }
@@ -121,4 +126,6 @@ public class Node
         P[insertionPoint] = r;
         KeysInUse++;
     }
+
+    public bool ContainsKey(long key) => K.Contains(key);
 }

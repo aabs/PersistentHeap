@@ -8,15 +8,44 @@ public class BPlusTree
     public Node Root => Nodes[(int)RootIndexNode];
     public long RootIndexNode { get; private set; }
 
-    public int Count() => (int)Nodes.Where(n => !n.IsDeleted && n.IsLeaf).Sum(n => n.KeysInUse);
+    public int Count()
+    {
+        if (Nodes.Count(n => !n.IsDeleted) == 1)
+        {
+            return (int)Root.KeysInUse;
+        }
+        return (int)Nodes.Where(n => !n.IsDeleted && n.IsLeaf).Sum(n => n.KeysInUse);
+    }
 
     public void Insert(long key, long reference)
         => InsertTree(key, reference, RootIndexNode);
 
+    public void SafeInsertToNode(Node n, long key, long r)
+    {
+        try
+        {
+            n.Insert(key, r);
+        }
+        catch (OverfullNodeException )
+        {
+            Split(n, key, r);
+        }
+
+    }
     public void InsertTree(long key, long r, long index)
     {
         // get the node specified by the index
         var n = Get(index);
+        if (n.IsDeleted)
+        {
+            throw new BPlusTreeException("Attempted to insert into deleted node");
+        }
+
+        if (n.ContainsKey(key))
+        {
+            SafeInsertToNode(n, key, r);
+            return;
+        }
 
         // if the node is full, split it first, then insert the data to the new subtree root
         if (n.IsFull)
@@ -27,28 +56,39 @@ public class BPlusTree
 
         if (n.IsLeaf)
         {
-            try
-            {
-                n.Insert(key, r);
-            }
-            catch (OverfullNodeException )
-            {
-                var newParent = Split(n, key, r);
-                InsertTree(key, r, newParent);
-            }
+            SafeInsertToNode(n, key, r);
             return;
         }
 
-        for (var i = 0; i < n.KeysInUse; i++)
+        int keyIndex = 0;
+        while(n.K[keyIndex] < key && keyIndex < n.KeysInUse)
         {
-            if (key < n.K[i])
-            {
-                InsertTree(key, r, n.P[i]);
-                return;
-            }
+            keyIndex++;
+        }
+        var targetNode = Get(n.P[keyIndex]);
+        try
+        {
+            targetNode.Insert(key, r);
+        }
+        catch (OverfullNodeException )
+        {
+            var newParent = Split(targetNode, key, r);
+            InsertTree(key, r, newParent);
         }
 
-        InsertTree(key, r, n.P[n.KeysInUse]);
+
+
+
+        //for (var i = 0; i < n.KeysInUse; i++)
+        //{
+        //    if (key < n.K[i])
+        //    {
+        //        InsertTree(key, r, n.P[i]);
+        //        return;
+        //    }
+        //}
+
+        //InsertTree(key, r, n.P[n.KeysInUse]);
     }
 
     public Node Search(long key) => SearchTree(key, Root);
@@ -101,22 +141,42 @@ public class BPlusTree
         var tmpKeys = new long[n.K.Length + 1];
 
         // copy contents of node across to the new arrays, inserting the new key
-        for (var i = n.K.Length-1; i > 0; i--)
+
+        int indexIntoOldNode = 0;
+        int indexIntoNewNode = 0;
+
+        while(indexIntoOldNode < n.KeysInUse && n.K[indexIntoOldNode] < newKey)
         {
-            if (n.K[i] < newKey)
-            {
-                tmpKeys[i + 1] = newKey;
-            }
-            else
-            {
-                tmpKeys[i + 1] = n.K[i];
-            }
+            tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
+            indexIntoOldNode++;
+            indexIntoNewNode++;
         }
+        tmpKeys[indexIntoNewNode] = newKey;
+        indexIntoNewNode++;
+        while(indexIntoOldNode < n.KeysInUse)
+        {
+            tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
+            indexIntoOldNode++;
+            indexIntoNewNode++;
+        }
+
+
+        //for (var i = n.K.Length-1; i > 0; i--)
+        //{
+        //    if (n.K[i] < newKey)
+        //    {
+        //        tmpKeys[i + 1] = newKey;
+        //    }
+        //    else
+        //    {
+        //        tmpKeys[i + 1] = n.K[i];
+        //    }
+        //}
 
         var midPoint = tmpKeys.Length / 2;
         var child1 = CreateNewLeafNode(tmpKeys[..midPoint]);
         var child2 = CreateNewLeafNode(tmpKeys[midPoint..]);
-        var newParentIndex = CreateNewInternalNode(midPoint, child1, child2);
+        var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint-1], child1, child2);
         var oldNode = DeleteNode(n);
         if (Root == oldNode)
         {
