@@ -132,9 +132,47 @@ public class BPlusTreeTests
     }
 
 
-    // adding a known value into a tree leaves the tree with the same Count as before
-    // a tree can accept a duplicate key without exception
+    [Property]
+    public void adding_a_known_value_into_a_tree_leaves_the_tree_with_the_same_Count_as_before(int[] xs)
+    {
+        // trivial case
+        if (xs.Length == 0)
+        {
+            return;
+        }
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        int countBefore = sut.Count();
+        var newVal = xs[0];
+        sut.Insert(newVal, newVal); 
+        sut.Count().Should().Be(countBefore);
+    }
+
     // a known key and its associated data can be removed from the tree
+    [Property]
+    public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree(int[] xs)
+    {
+        // trivial case
+        if (xs.Length == 0)
+        {
+            return;
+        }
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        int countBefore = sut.Count();
+        var valToRemove = xs[0];
+        var w = sut.Delete(valToRemove);
+        w.Should().NotBeNull();
+        w.Value.Item1.Should().Be(valToRemove);
+        sut.Count().Should().Be(countBefore-1);
+    }
+
     // removing a value from the tree reduces its count by 1
     // removing an unknown value from a tree results in an unknown key exception
 

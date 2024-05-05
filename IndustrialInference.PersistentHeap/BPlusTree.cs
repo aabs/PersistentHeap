@@ -14,6 +14,7 @@ public class BPlusTree
         {
             return (int)Root.KeysInUse;
         }
+
         return (int)Nodes.Where(n => !n.IsDeleted && n.IsLeaf).Sum(n => n.KeysInUse);
     }
 
@@ -26,12 +27,12 @@ public class BPlusTree
         {
             n.Insert(key, r);
         }
-        catch (OverfullNodeException )
+        catch (OverfullNodeException)
         {
             Split(n, key, r);
         }
-
     }
+
     public void InsertTree(long key, long r, long index)
     {
         // get the node specified by the index
@@ -60,23 +61,22 @@ public class BPlusTree
             return;
         }
 
-        int keyIndex = 0;
-        while(n.K[keyIndex] < key && keyIndex < n.KeysInUse)
+        var keyIndex = 0;
+        while (n.K[keyIndex] < key && keyIndex < n.KeysInUse)
         {
             keyIndex++;
         }
+
         var targetNode = Get(n.P[keyIndex]);
         try
         {
             targetNode.Insert(key, r);
         }
-        catch (OverfullNodeException )
+        catch (OverfullNodeException)
         {
             var newParent = Split(targetNode, key, r);
             InsertTree(key, r, newParent);
         }
-
-
 
 
         //for (var i = 0; i < n.KeysInUse; i++)
@@ -91,7 +91,7 @@ public class BPlusTree
         //InsertTree(key, r, n.P[n.KeysInUse]);
     }
 
-    public Node Search(long key) => SearchTree(key, Root);
+    public Node Search(long key) => FindNodeForKey(key, Root);
 
     private long CreateNewInternalNode(long key, long leftChild, long rightChild)
     {
@@ -113,17 +113,27 @@ public class BPlusTree
 
     private Node GetIndirect(long id, Node n) => Nodes[(int)n.P[id]];
 
-    private Node SearchTree(long key, Node node)
+    private Node FindNodeForKey(long key, Node node)
     {
-        for (var i = 0; i < node.KeysInUse; i++)
+        if (!node.IsLeaf)
         {
-            if (key < node.K[i])
+            // if this node is not a leaf, then we need to search the keys to
+            // find the node that contains the data we are after
+            var i = 0;
+            while (i < node.KeysInUse && node.K[i] < key)
             {
-                return SearchTree(key, GetIndirect(i, node));
+                i++;
             }
+
+            if (i >= node.KeysInUse)
+            {
+                return Get(node.KeysInUse);
+            }
+
+            return GetIndirect(i, node);
         }
 
-        return Get(node.KeysInUse);
+        return node;
     }
 
     private long Split(Node n, long newKey, long newRef)
@@ -142,18 +152,19 @@ public class BPlusTree
 
         // copy contents of node across to the new arrays, inserting the new key
 
-        int indexIntoOldNode = 0;
-        int indexIntoNewNode = 0;
+        var indexIntoOldNode = 0;
+        var indexIntoNewNode = 0;
 
-        while(indexIntoOldNode < n.KeysInUse && n.K[indexIntoOldNode] < newKey)
+        while (indexIntoOldNode < n.KeysInUse && n.K[indexIntoOldNode] < newKey)
         {
             tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
             indexIntoOldNode++;
             indexIntoNewNode++;
         }
+
         tmpKeys[indexIntoNewNode] = newKey;
         indexIntoNewNode++;
-        while(indexIntoOldNode < n.KeysInUse)
+        while (indexIntoOldNode < n.KeysInUse)
         {
             tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
             indexIntoOldNode++;
@@ -176,12 +187,13 @@ public class BPlusTree
         var midPoint = tmpKeys.Length / 2;
         var child1 = CreateNewLeafNode(tmpKeys[..midPoint]);
         var child2 = CreateNewLeafNode(tmpKeys[midPoint..]);
-        var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint-1], child1, child2);
+        var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint - 1], child1, child2);
         var oldNode = DeleteNode(n);
         if (Root == oldNode)
         {
             RootIndexNode = newParentIndex;
         }
+
         return newParentIndex;
     }
 
@@ -204,4 +216,20 @@ public class BPlusTree
      *
      */
 
+    public (long, long)? Delete(long key)
+    {
+        var n = FindNodeForKey(key, Root);
+
+        for (var i = 0; i < n.KeysInUse; i++)
+        {
+            if (n.K[i] == key)
+            {
+                var r = n.P[i];
+                n.Delete(key);
+                return (key, r);
+            }
+        }
+
+        return null;
+    }
 }
