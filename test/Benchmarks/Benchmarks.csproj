@@ -1,15 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageReference Include="LightningDB" Version="0.14.0" />
+    <PackageReference Include="StructPacker" Version="1.0.8" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\IndustrialInference.PersistentHeap\IndustrialInference.BPlusTree.csproj" />
+  </ItemGroup>
 </Project>

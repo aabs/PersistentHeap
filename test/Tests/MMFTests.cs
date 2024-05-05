@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 
 namespace PersistentHeap.Tests;
 
-[TestFixture]
+
 public class MemoryMappedFilesTests
 {
-    [Test]
+    [Fact]
     public void CreateAndWriteToMMF()
     {
         var filename = Path.GetTempFileName();
@@ -42,7 +42,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [Test]
+    [Fact]
     public void CreateAndWriteToMMFWithoutFlush()
     {
         var filename = Path.GetTempFileName();
@@ -74,7 +74,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [Test]
+    [Fact]
     public void AccessMemoryMappedFileUsingMemoryOfT()
     {
         var filename = Path.GetTempFileName();
@@ -102,7 +102,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [Test, Ignore("interactive")]
+    [Fact (Skip="interactive")]
     public void Test2()
     {
         // create a memory-mapped file of length 1000 bytes and give it a 'map name' of 'test'  

@@ -1,11 +1,10 @@
-﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Running;
 using LightningDB;
+using StructPacker;
 
 namespace Benchmarks;
 
@@ -15,9 +14,11 @@ public class LightningBenchmark
 {
     private LightningEnvironment env;
     private Random r;
-    
+
     [Params(1, 10, 100)]
+#pragma warning disable IDE1006 // Naming Styles
     public int N;
+#pragma warning restore IDE1006 // Naming Styles
 
     private LightningTransaction tx;
     private LightningDatabase db;
@@ -63,7 +64,7 @@ public class LightningBenchmark
             {
                 var keySpan = new ReadOnlySpan<byte>(Encoding.UTF8.GetBytes($"Contents {i}"));
                 var (resultCode, key, value) = tx.Get(db, keySpan);
-                
+
                 var contentSpan = MemoryMarshal.Cast<byte, ContentsBlock>(value.AsSpan());
                 var contents2 = contentSpan.ToArray()[0];
             }
@@ -80,7 +81,7 @@ public class LightningBenchmark
             for (int i = 0; i < N; i++)
             {
                 var keySpan = Encoding.UTF8.GetBytes($"Contents {i}");
-                tx.Put(db, keySpan, ObjectToByteArray(contents1));
+                tx.Put(db, keySpan, contents1.Pack());
             }
         }
         // read back
@@ -89,47 +90,23 @@ public class LightningBenchmark
             {
                 var keySpan = Encoding.UTF8.GetBytes($"Contents {i}");
                 var (resultCode, key, value) = tx.Get(db, keySpan);
-                var contents2 = ByteArrayToObject(value.CopyToNewArray());
+                ContentsBlock contents2 = new();
+                contents2.Unpack(value.CopyToNewArray());
             }
         }
     }
 
-
-    // Convert an object to a byte array
-    private byte[] ObjectToByteArray(Object obj)
-    {
-        if (obj == null)
-            return null;
-
-        BinaryFormatter bf = new BinaryFormatter();
-        MemoryStream ms = new MemoryStream();
-        bf.Serialize(ms, obj);
-
-        return ms.ToArray();
-    }
-
     // Convert a byte array to an Object
-    private Object ByteArrayToObject(byte[] arrBytes)
-    {
-        MemoryStream memStream = new MemoryStream();
-        BinaryFormatter binForm = new BinaryFormatter();
-        memStream.Write(arrBytes, 0, arrBytes.Length);
-        memStream.Seek(0, SeekOrigin.Begin);
-        Object obj = (Object)binForm.Deserialize(memStream);
-
-        return obj;
-    }
-    [Serializable]
+    [Pack]
     public struct ContentsBlock
     {
+        public ContentsBlock(){}
         public ContentsBlock(int version, int soIndexBlockName)
         {
             Version = version;
             SoIndexBlockName = soIndexBlockName;
         }
-
         public int Version { get; set; }
         public int SoIndexBlockName { get; set; }
     }
-
 }
