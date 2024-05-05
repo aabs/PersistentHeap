@@ -53,9 +53,9 @@ public class Node
             P[i - 1] = P[i];
         }
 
-        K[KeysInUse] = default;
-        P[KeysInUse] = P[KeysInUse + 1];
-        P[KeysInUse + 1] = default;
+        K[KeysInUse-1] = default;
+        P[KeysInUse-1] = P[KeysInUse];
+        P[KeysInUse] = default;
         KeysInUse--;
     }
 
@@ -127,5 +127,5 @@ public class Node
         KeysInUse++;
     }
 
-    public bool ContainsKey(long key) => K.Contains(key);
+    public bool ContainsKey(long key) => K[..(int)KeysInUse].Contains(key);
 }

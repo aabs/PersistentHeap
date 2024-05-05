@@ -232,4 +232,10 @@ public class BPlusTree
 
         return null;
     }
+
+    public bool ContainsKey(long key)
+    {
+        var n = FindNodeForKey(key, Root);
+        return n.ContainsKey(key);
+    }
 }

@@ -1,6 +1,5 @@
 namespace PersistentHeap.Tests;
 using System;
-using DotNext.Text;
 
 
 
@@ -25,7 +24,7 @@ public class BPlusTreeTests
         sut.RootIndexNode.Should().Be(0);
     }
 
-     [Property]
+    [Property]
     public void adding_an_element_to_an_empty_tree_leave_the_root_node_with_one_element(int i)
     {
         var sut = new BPlusTree();
@@ -59,21 +58,21 @@ public class BPlusTreeTests
     }
 
 
-   [Fact]
+    [Fact]
     public void inserting_MaxNodeSize_minus_1_items_into_a_tree_leaves_a_tree_with_one_node_that_is_not_full()
     {
         var sut = new BPlusTree();
-        for (var i = 0; i < Constants.MaxNodeSize-1; i++)
+        for (var i = 0; i < Constants.MaxNodeSize - 1; i++)
         {
             sut.Insert(i, i);
         }
         // assert that there is only one full node
         sut.Nodes.Count.Should().Be(1);
         sut.Root.IsFull.Should().BeFalse(); // adding one more item to the node would trigger a split.
-        sut.Root.KeysInUse.Should().Be(Constants.MaxNodeSize-1);
+        sut.Root.KeysInUse.Should().Be(Constants.MaxNodeSize - 1);
     }
 
-     [Fact]
+    [Fact]
     public void adding_one_element_into_a_tree_with_one_full_node_leaves_a_tree_with_three_live_nodes_and_one_deleted_node()
     {
         var sut = new BPlusTree();
@@ -87,11 +86,11 @@ public class BPlusTreeTests
         sut.Nodes.Count(n => !n.IsDeleted).Should().Be(3);
     }
 
-     [Fact]
+    [Fact]
     public void adding_an_element_into_a_tree_with_one_partially_full_node_leaves_the_same_number_of_nodes()
     {
         var sut = new BPlusTree();
-        for (var i = 0; i < Constants.MaxNodeSize-3; i++)
+        for (var i = 0; i < Constants.MaxNodeSize - 3; i++)
         {
             sut.Insert(i, i);
         }
@@ -103,7 +102,7 @@ public class BPlusTreeTests
     }
 
     // 
-     [Property]
+    [Property]
     public void adding_a_new_value_into_a_tree_leaves_the_tree_with_a_Count_one_larger_than_before(int[] xs)
     {
         var sut = new BPlusTree();
@@ -113,10 +112,10 @@ public class BPlusTreeTests
         }
         int countBefore = sut.Count();
         var newVal = xs.Length == 0 ? 1 : (xs.Max() + 1);
-        sut.Insert(newVal, newVal); 
-        sut.Count().Should().Be(countBefore+1);
+        sut.Insert(newVal, newVal);
+        sut.Count().Should().Be(countBefore + 1);
     }
-     [Fact]
+    [Fact]
     public void adding_a_new_value_into_a_tree_leaves_the_tree_with_a_Count_one_larger_than_before__case_1()
     {
         int[] xs = [-2, 6, 3, -1, 2, 1, 4, 5, 0];
@@ -127,8 +126,8 @@ public class BPlusTreeTests
         }
         int countBefore = sut.Count();
         var newVal = xs.Length == 0 ? 1 : (xs.Max() + 1);
-        sut.Insert(newVal, newVal); 
-        sut.Count().Should().Be(countBefore+1);
+        sut.Insert(newVal, newVal);
+        sut.Count().Should().Be(countBefore + 1);
     }
 
 
@@ -147,7 +146,7 @@ public class BPlusTreeTests
         }
         int countBefore = sut.Count();
         var newVal = xs[0];
-        sut.Insert(newVal, newVal); 
+        sut.Insert(newVal, newVal);
         sut.Count().Should().Be(countBefore);
     }
 
@@ -165,16 +164,26 @@ public class BPlusTreeTests
         {
             sut.Insert(x, x);
         }
-        int countBefore = sut.Count();
-        var valToRemove = xs[0];
-        var w = sut.Delete(valToRemove);
-        w.Should().NotBeNull();
-        w.Value.Item1.Should().Be(valToRemove);
-        sut.Count().Should().Be(countBefore-1);
+        var valToFind = xs[0];
+        sut.ContainsKey(valToFind).Should().BeTrue();
+        var w = sut.Delete(valToFind);
+        sut.ContainsKey(valToFind).Should().BeFalse();
     }
 
-    // removing a value from the tree reduces its count by 1
-    // removing an unknown value from a tree results in an unknown key exception
+    [Property]
+    public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree_case_1()
+    {
+        int[] xs = [0];
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        var valToFind = xs[0];
+        sut.ContainsKey(valToFind).Should().BeTrue();
+        var w = sut.Delete(valToFind);
+        sut.ContainsKey(valToFind).Should().BeFalse();
+    }
 
 
     [Fact]
@@ -195,4 +204,44 @@ public class BPlusTreeTests
         var sut = new BPlusTree();
         sut.Should().NotBeNull();
     }
+
+    // removing a value from the tree reduces its count by 1
+    [Property]
+    public void removing_a_value_from_the_tree_reduces_its_count_by_1(int[] xs)
+    {
+        // trivial case
+        if (xs.Length == 0)
+        {
+            return;
+        }
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        int countBefore = sut.Count();
+        var valToRemove = xs[0];
+        var w = sut.Delete(valToRemove);
+        w.Should().NotBeNull();
+        w.Value.Item1.Should().Be(valToRemove);
+        sut.Count().Should().Be(countBefore - 1);
+    }
+    [Fact]
+    public void removing_a_value_from_the_tree_reduces_its_count_by_1__case_1()
+    {
+        int[] xs = [-2, -3, 5, 0, 4, 2, 3, -1, 1];
+
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        int countBefore = sut.Count();
+        var valToRemove = xs[0];
+        var w = sut.Delete(valToRemove);
+        w.Should().NotBeNull();
+        w.Value.Item1.Should().Be(valToRemove);
+        sut.Count().Should().Be(countBefore - 1);
+    }
+    // removing an unknown value from a tree results in an unknown key exception
 }
