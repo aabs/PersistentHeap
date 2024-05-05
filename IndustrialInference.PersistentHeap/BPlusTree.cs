@@ -36,7 +36,7 @@ public class BPlusTree
     public void InsertTree(long key, long r, long index)
     {
         // get the node specified by the index
-        var n = Get(index);
+        var n = FindNodeForKey(key, Get(index));
         if (n.IsDeleted)
         {
             throw new BPlusTreeException("Attempted to insert into deleted node");
@@ -125,12 +125,13 @@ public class BPlusTree
                 i++;
             }
 
-            if (i >= node.KeysInUse)
-            {
-                return Get(node.KeysInUse);
-            }
+            //if (i >= node.KeysInUse)
+            //{
+            //    return Get(node.KeysInUse);
+            //}
 
-            return GetIndirect(i, node);
+            var n2 = GetIndirect(i, node);
+            return FindNodeForKey(key, n2);
         }
 
         return node;
@@ -230,7 +231,7 @@ public class BPlusTree
             }
         }
 
-        return null;
+        throw new KeyNotFoundException();
     }
 
     public bool ContainsKey(long key)

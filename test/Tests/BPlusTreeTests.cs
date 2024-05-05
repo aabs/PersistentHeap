@@ -214,6 +214,45 @@ public class BPlusTreeTests
         {
             return;
         }
+
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+
+        int countBefore = sut.Count();
+        var valToRemove = xs[0];
+        var w = sut.Delete(valToRemove);
+        w.Should().NotBeNull();
+        w.Value.Item1.Should().Be(valToRemove);
+        sut.Count().Should().Be(countBefore - 1);
+    }
+
+
+    [Fact]
+    public void removing_a_value_from_the_tree_reduces_its_count_by_1__case_3()
+    {
+        int[] xs = [-2, 5, -4, 4, 3, -1, 1, 2, -3, 0, 0];
+
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        int countBefore = sut.Count();
+        var valToRemove = xs[0];
+        var w = sut.Delete(valToRemove);
+        w.Should().NotBeNull();
+        w.Value.Item1.Should().Be(valToRemove);
+        sut.Count().Should().Be(countBefore - 1);
+    }
+
+    [Fact]
+    public void removing_a_value_from_the_tree_reduces_its_count_by_1__case_2()
+    {
+        int[] xs = [5, -3, 1, 2, -4, 3, 4, 0, -2, -1];
+
         var sut = new BPlusTree();
         foreach (var x in xs)
         {
@@ -243,5 +282,20 @@ public class BPlusTreeTests
         w.Value.Item1.Should().Be(valToRemove);
         sut.Count().Should().Be(countBefore - 1);
     }
-    // removing an unknown value from a tree results in an unknown key exception
+    [Property]
+    public void removing_an_unknown_value_from_a_tree_results_in_an_unknown_key_exception(int[] xs)
+    {
+        // trivial case
+        if (xs.Length == 0)
+        {
+            return;
+        }
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+        var newVal = xs.Length == 0 ? 1 : (xs.Max() + 1);
+        Assert.Throws<KeyNotFoundException>(() =>sut.Delete(newVal)) ;
+    }
 }
