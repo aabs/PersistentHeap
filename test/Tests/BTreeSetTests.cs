@@ -1,33 +1,46 @@
-using System;
-using System.Diagnostics;
-using FluentAssertions;
-using IndustrialInference.BPlusTree;
-
 namespace PersistentHeap.Tests;
 
-[TestFixture, Category("B+Tree")]
+#region
+
+using System.ComponentModel;
+using System.Diagnostics;
+using Random = System.Random;
+
+#endregion
+
+
+[Category("B+Tree")]
 public class BTreeSetTests
 {
+    public BTreeSetTests()
+    {
+        var opts = new PageOptions { AllowDuplicates = false, PageSize = 4 };
+        PageManager = new PageManager<int>(opts);
+    }
+
     public PageManager<int> PageManager { get; set; }
 
-    [Test, Category("Slow"), Ignore("too slow")]
+    [Category("Slow")]
+    [Fact(Skip = "too slow")]
     public void CanAddLargeNumbersOfElements()
     {
-        var sw = new Stopwatch(); sw.Start();
+        var sw = new Stopwatch();
+        sw.Start();
         var opts = new PageOptions { AllowDuplicates = false, PageSize = 1 << 10 };
         var pm = new PageManager<int>(opts);
         var r = new Random(13);
         var sut = new BTreeSet<int>(int.MinValue, pm);
-        for (int i = 0; i < 1 << 20; i++)
+        for (var i = 0; i < 1 << 20; i++)
         {
             sut.Add(new KeyPtr<int>(r.Next(1, int.MaxValue), default));
         }
+
         sw.Stop();
         pm.Body.Should().HaveCount(2051);
         Console.WriteLine($"time: {sw.Elapsed:t}");
     }
 
-    [Test]
+    [Fact]
     public void CanAddOne()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -39,14 +52,14 @@ public class BTreeSetTests
         sut.Contains(unexpected).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void CanCheckEmptyTreeForContains()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
         sut.Contains(23).Should().BeFalse();
     }
 
-    [Test]
+    [Fact]
     public void CanCheckForPresentElement()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -55,7 +68,7 @@ public class BTreeSetTests
         sut.Contains(23).Should().BeTrue();
     }
 
-    [Test]
+    [Fact]
     public void CanSplitOnOverflow()
     {
         var sut = new BTreeSet<int>(int.MinValue, PageManager);
@@ -68,12 +81,5 @@ public class BTreeSetTests
         sut.Add(new KeyPtr<int>(23, default));
         sut.Add(new KeyPtr<int>(44, default));
         sut.Add(new KeyPtr<int>(44, default));
-    }
-
-    [SetUp]
-    public void SetUp()
-    {
-        var opts = new PageOptions { AllowDuplicates = false, PageSize = 4 };
-        PageManager = new PageManager<int>(opts);
     }
 }

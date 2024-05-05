@@ -4,10 +4,10 @@ using System.Linq;
 
 namespace PersistentHeap.Tests;
 
-[TestFixture]
+
 public class StorageTests
 {
-    [Test]
+    [Fact]
     public void CanAccessRangeOfLocations()
     {
         const int size = 32;
@@ -22,7 +22,7 @@ public class StorageTests
         sut[2].Should().Be(0x3);
     }
 
-    [Test]
+    [Fact]
     public void CanCreateByteStorage()
     {
         const int size = 1024;
@@ -30,7 +30,7 @@ public class StorageTests
         sut.Should().NotBeNull();
     }
 
-    [Test]
+    [Fact]
     public void CanOverwriteUsingRangeNotation()
     {
         const int size = 32;
@@ -47,7 +47,7 @@ public class StorageTests
         sut[8].Should().Be(0x8);
     }
 
-    [Test]
+    [Fact]
     public void RoundtripGettingAndSetting()
     {
         const int size = 32;
@@ -59,7 +59,7 @@ public class StorageTests
         sut[12].Should().Be(0xFF);
     }
 
-    [Test]
+    [Fact]
     public void StorageHasCorrectBuffer()
     {
         const int size = 1024;
@@ -67,7 +67,7 @@ public class StorageTests
         sut.Buf.Should().NotBeNull().And.HaveCount(size);
     }
 
-    [Test]
+    [Fact]
     public void StorageIsAllInitialised()
     {
         const int size = 32;
