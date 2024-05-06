@@ -80,6 +80,27 @@ public class BPlusTreeTests
         sut.Count().Should().Be(countBefore);
     }
 
+    [Fact]
+    public void adding_a_known_value_into_a_tree_leaves_the_tree_with_the_same_Count_as_before__case_1()
+    {
+        int[] xs = [-1, 2, 0, 3, -2, 1, 4, -3, -4];
+        // trivial case
+        if (xs.Length == 0)
+        {
+            return;
+        }
+
+        var sut = new BPlusTree();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+
+        var countBefore = sut.Count();
+        var newVal = xs[0];
+        sut.Insert(newVal, newVal);
+        sut.Count().Should().Be(countBefore);
+    }
 
     [Property]
     public void adding_a_new_value_into_a_tree_leaves_the_tree_with_a_Count_one_larger_than_before(int[] xs)

@@ -8,7 +8,7 @@ public class NodePropertyTests
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_a_key_to_a_node_that_already_contains_it_does_not_add_anything(int[] xs)
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         foreach (var i in xs)
         {
             sut.Insert(i, 123);
@@ -28,7 +28,7 @@ public class NodePropertyTests
         {
             return;
         }
-        var sut = new Node();
+        var sut = new InternalNode();
         foreach (var i in xs)
         {
             sut.Insert(i, 123, overwriteOnEquality: true);
@@ -40,21 +40,21 @@ public class NodePropertyTests
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_keys_to_a_node_leaves_the_node_keys_in_order(int[] xs)
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         foreach (var i in xs)
         {
             sut.Insert(i, 123, overwriteOnEquality: true);
         }
 
         var expected = xs.Distinct().OrderBy(x => x).Select(i => (long)i).ToArray();
-        var actual = sut.K[..(int)sut.Count];
+        var actual = sut.Keys[..(int)sut.Count];
         expected.Should().BeEquivalentTo(actual);
     }
 
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void removing_a_key_from_a_node_reduces_the_number_of_keys_by_one(int[] xs)
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         foreach (var i in xs)
         {
             sut.Insert(i, 123, overwriteOnEquality: true);
@@ -69,7 +69,7 @@ public class NodePropertyTests
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void removing_a_key_from_a_node_leaves_the_node_keys_in_order(int[] xs)
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         foreach (var i in xs)
         {
             sut.Insert(i, 123, overwriteOnEquality: true);
@@ -81,7 +81,7 @@ public class NodePropertyTests
         }
         sut.Delete(xs[0]);
 
-        var a = sut.K[..(int)sut.Count];
+        var a = sut.Keys[..(int)sut.Count];
         var b = a.OrderBy(x => x);
         for (int i = 0; i < (int)sut.Count; i++)
         {
@@ -92,7 +92,7 @@ public class NodePropertyTests
     [Fact]
     public void removing_an_element_from_an_empty_node_changes_nothing()
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         sut.Count.Should().Be(0);
         sut.Delete(123);
         sut.Count.Should().Be(0);
@@ -101,7 +101,7 @@ public class NodePropertyTests
     [Property(Arbitrary = [typeof(IntArrayOfUniqueValuesArbitrary)])]
     public void any_key_in_a_node_will_always_be_found_by_contains(int[] xs)
     {
-        var sut = new Node();
+        var sut = new InternalNode();
         for (int i = 0; i < xs.Length; i++)
         {
             sut.Insert(xs[i], xs[i]);
