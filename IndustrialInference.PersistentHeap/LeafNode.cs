@@ -1,13 +1,14 @@
 namespace IndustrialInference.BPlusTree;
 
-public class LeafNode : Node
+public class LeafNode<TKey, TVal> : Node<TKey, TVal>
+    where TKey : IComparable<TKey>
 {
     public LeafNode()
     {
-        Keys = new long[Constants.MaxNodeSize];
-        Items = new long[Constants.MaxNodeSize];
+        Keys = new TKey[Constants.MaxNodeSize];
+        Items = new TVal[Constants.MaxNodeSize];
     }
-    public LeafNode(long[] keys, long[] items) : this()
+    public LeafNode(TKey[] keys, TVal[] items) : this()
     {
         Array.Copy(keys, Keys, keys.Length);
         Array.Copy(items, Items, items.Length);
@@ -15,8 +16,8 @@ public class LeafNode : Node
     }
 
 
-    public long[] Items { get; set; }
-    public override void Delete(long k)
+    public TVal[] Items { get; set; }
+    public override void Delete(TKey k)
     {
         var index = Array.IndexOf(Keys, k);
 
@@ -49,7 +50,7 @@ public class LeafNode : Node
         KeysInUse--;
     }
 
-    public override void Insert(long k, long r, bool overwriteOnEquality = true) 
+    public override void Insert(TKey k, TVal r, bool overwriteOnEquality = true) 
     {
         var knownKey = ContainsKey(k);
         if (knownKey && !overwriteOnEquality)
@@ -70,7 +71,7 @@ public class LeafNode : Node
         }
 
         var insertionPoint = 0;
-        while (insertionPoint < KeysInUse && Keys[insertionPoint] < k)
+        while (insertionPoint < KeysInUse && Keys[insertionPoint].CompareTo(k) < 0)
         {
             insertionPoint++;
         }
@@ -80,7 +81,7 @@ public class LeafNode : Node
             OverfullNodeException.Throw("Insertion would cause overflow");
         }
 
-        if (Keys[insertionPoint] == k)
+        if (Keys[insertionPoint].CompareTo(k) == 0)
         {
             if (insertionPoint >= KeysInUse)
             {

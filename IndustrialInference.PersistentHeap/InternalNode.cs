@@ -1,27 +1,28 @@
 namespace IndustrialInference.BPlusTree;
 
-public class InternalNode : Node
+public class InternalNode<TKey, TVal> : Node<TKey, TVal>
+where TKey : IComparable<TKey>
 {
     public InternalNode()
     {
-        Keys = new long[Constants.MaxNodeSize - 1];
-        P = new long[Constants.MaxNodeSize];
+        Keys = new TKey[Constants.MaxNodeSize - 1];
+        P = new int[Constants.MaxNodeSize];
     }
 
-    public InternalNode(long[] keys) : this()
+    public InternalNode(TKey[] keys) : this()
     {
         Array.Copy(keys, Keys, keys.Length);
         KeysInUse = keys.Count();
     }
 
-    public InternalNode(long[] keys, long[] pointers) : this(keys)
+    public InternalNode(TKey[] keys, int[] pointers) : this(keys)
     {
         Array.Copy(pointers, P, pointers.Length);
     }
 
-    public long[] P { get; set; }
+    public int[] P { get; set; }
 
-    public override void Delete(long k)
+    public override void Delete(TKey k)
     {
         var index = Array.IndexOf(Keys, k);
 
@@ -48,13 +49,13 @@ public class InternalNode : Node
             P[i - 1] = P[i];
         }
 
-        Keys[KeysInUse-1] = default;
-        P[KeysInUse-1] = P[KeysInUse];
+        Keys[KeysInUse - 1] = default;
+        P[KeysInUse - 1] = P[KeysInUse];
         P[KeysInUse] = default;
         KeysInUse--;
     }
 
-    public override void Insert(long k, long r, bool overwriteOnEquality = true)
+    public override void Insert(TKey k, TVal r, bool overwriteOnEquality = true)
     {
         var knownKey = ContainsKey(k);
         if (knownKey && !overwriteOnEquality)
@@ -68,14 +69,15 @@ public class InternalNode : Node
 
         if (KeysInUse == 0)
         {
+            throw new BPlusTreeException("empty internal node should have been a leaf node?");
             Keys[0] = k;
-            P[0] = r;
+            //P[0] = r;
             KeysInUse++;
             return;
         }
 
         var insertionPoint = 0;
-        while (insertionPoint < KeysInUse && Keys[insertionPoint] < k)
+        while (insertionPoint < KeysInUse && Keys[insertionPoint].CompareTo(k) < 0)
         {
             insertionPoint++;
         }
@@ -85,7 +87,7 @@ public class InternalNode : Node
             OverfullNodeException.Throw("Insertion would cause overflow");
         }
 
-        if (Keys[insertionPoint] == k)
+        if (Keys[insertionPoint].CompareTo(k) == 0)
         {
             if (insertionPoint >= KeysInUse)
             {
@@ -93,7 +95,8 @@ public class InternalNode : Node
                 // keys are initialised to, but we are writing beyond the end of the area currently
                 // in use, so we need to insert as usual (incrementing keys in use etc.)
                 Keys[insertionPoint] = k;
-                P[insertionPoint] = r;
+                // not sure what to do here (for an internal node)
+                //P[insertionPoint] = r;
                 KeysInUse++;
                 return;
             }
@@ -101,7 +104,8 @@ public class InternalNode : Node
             // we have a match. Overwrite if allowed to.
             if (overwriteOnEquality)
             {
-                P[insertionPoint] = r;
+                // not sure what to do here (for an internal node)
+                //P[insertionPoint] = r;
             }
 
             return;
@@ -109,7 +113,7 @@ public class InternalNode : Node
 
         for (var i = KeysInUse + 1; i > insertionPoint; i--)
         {
-            if (i < Constants.MaxNodeSize - 1)
+            if (i < Keys.Length - 1)
             {
                 Keys[i] = Keys[i - 1];
             }
@@ -118,7 +122,8 @@ public class InternalNode : Node
         }
 
         Keys[insertionPoint] = k;
-        P[insertionPoint] = r;
+        // not sure what to do here (for an internal node)
+        //P[insertionPoint] = r;
         KeysInUse++;
     }
 }

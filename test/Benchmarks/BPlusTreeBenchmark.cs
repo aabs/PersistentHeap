@@ -31,7 +31,7 @@ public class BPlusTreeBenchmark
     [Benchmark]
     public void add_elements()
     {
-        var sut = new BPlusTree();
+        var sut = new BPlusTree<long, long>();
         for (var i = 0; i < 1 << ElementsToInsertShift; i++)
         {
             sut.Insert(i, random.Next(1, int.MaxValue));
