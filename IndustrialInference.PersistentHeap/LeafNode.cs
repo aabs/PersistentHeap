@@ -113,4 +113,17 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
         Items[insertionPoint] = r;
         KeysInUse++;
     }
+
+    public TVal? this[TKey key]
+    {
+        get
+        {
+            var index = Array.IndexOf(Keys, key);
+            if (index == -1)
+            {
+                return default;
+            }
+            return Items[index];
+        }
+    }
 }

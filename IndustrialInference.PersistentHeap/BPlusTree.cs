@@ -239,4 +239,16 @@ public class BPlusTree<TKey, TVal>
         var n = FindNodeForKey(key, Root);
         return n.ContainsKey(key);
     }
+
+    public TVal? this[TKey key]
+    {
+        get
+        {
+            var n = FindNodeForKey(key, Root);
+
+            return n[key];
+        }
+    }
+
+
 }
