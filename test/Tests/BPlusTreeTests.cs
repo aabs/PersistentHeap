@@ -2,7 +2,6 @@ namespace PersistentHeap.Tests;
 
 public class BPlusTreeTests
 {
-    // searching for a key returns the same value as was inserted
     [Property]
     public void searching_for_a_key_returns_the_same_value_as_was_inserted(Dictionary<int, string> testData)
     {
@@ -24,7 +23,6 @@ public class BPlusTreeTests
         Assert.Equal(foundValue, testData[valToFind]);
     }
 
-    // a known key and its associated data can be removed from the tree
     [Property]
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree(int[] xs)
     {
