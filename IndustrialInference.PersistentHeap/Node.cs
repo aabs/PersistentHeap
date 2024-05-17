@@ -3,6 +3,12 @@ namespace IndustrialInference.BPlusTree;
 public abstract class Node<TKey, TVal>
     where TKey : IComparable<TKey>
 {
+    public Node(int id)
+    {
+        ID = id;
+    }
+    public int ID { get; init; }
+
     public TKey[] Keys { get; set; }
     public long Count => KeysInUse;
     public bool IsEmpty => KeysInUse == 0;

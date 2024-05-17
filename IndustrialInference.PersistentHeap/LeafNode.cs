@@ -3,12 +3,12 @@ namespace IndustrialInference.BPlusTree;
 public class LeafNode<TKey, TVal> : Node<TKey, TVal>
     where TKey : IComparable<TKey>
 {
-    public LeafNode()
+    public LeafNode(int id):base(id)
     {
         Keys = new TKey[Constants.MaxNodeSize];
         Items = new TVal[Constants.MaxNodeSize];
     }
-    public LeafNode(TKey[] keys, TVal[] items) : this()
+    public LeafNode(int id, TKey[] keys, TVal[] items) : this(id)
     {
         Array.Copy(keys, Keys, keys.Length);
         Array.Copy(items, Items, items.Length);

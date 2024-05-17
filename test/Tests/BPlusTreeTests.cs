@@ -241,9 +241,9 @@ public class BPlusTreeTests
             sut.Insert(i, i);
         }
 
-        sut.Nodes.Count.Should().Be(4);
+        sut.Nodes.Count.Should().Be(3);
         sut.Root.IsFull.Should().BeFalse();
-        sut.Nodes.Count(n => n.IsDeleted).Should().Be(1);
+        sut.Nodes.Count(n => n.IsDeleted).Should().Be(0);
         sut.Nodes.Count(n => !n.IsDeleted).Should().Be(3);
     }
 

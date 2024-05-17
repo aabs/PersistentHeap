@@ -1,14 +1,56 @@
 namespace IndustrialInference.BPlusTree;
 
+
+/// <summary>
+/// Represents a B+ tree data structure.
+/// </summary>
+/// <typeparam name="TKey">The type of the keys in the tree.</typeparam>
+/// <typeparam name="TVal">The type of the values in the tree.</typeparam>
+/// <remarks>
+/// <para> Here is a quick representation of the data structure for aiding visualisation
+/// <code>
+/// <![CDATA[
+/// 
+///                [P,13,P,/,P]
+///                 |    |
+///                /      \_______
+///               /               \
+///     [P,5,P,10,P]               [P,20,P,/,P]
+///     /    |     \_               |     \
+///    /     |       \              |      \
+/// [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
+/// ]]>
+/// </code>
+/// </para>
+/// </remarks>
 public class BPlusTree<TKey, TVal>
     where TKey : IComparable<TKey>
 {
-    public BPlusTree() => Nodes = new List<Node<TKey, TVal>> { new LeafNode<TKey, TVal>() };
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BPlusTree{TKey, TVal}"/> class.
+    /// </summary>
+    public BPlusTree() => Nodes = [new LeafNode<TKey, TVal>(0)];
 
+    /// <summary>
+    /// Gets the list of nodes in the tree.
+    /// </summary>
     public List<Node<TKey, TVal>> Nodes { get; init; }
+
+    /// <summary>
+    /// Gets the root node of the tree.
+    /// </summary>
     public Node<TKey, TVal> Root => Nodes[RootIndexNode];
+
+    /// <summary>
+    /// Gets or sets the index of the root node.
+    /// </summary>
     public int RootIndexNode { get; private set; }
 
+    /// <summary>
+    /// Gets or sets the value associated with the specified key.
+    /// </summary>
+    /// <param name="key">The key to search for.</param>
+    /// <returns>The value associated with the key, or null if the key is not found.</returns>
     public TVal? this[TKey key]
     {
         get
@@ -19,6 +61,11 @@ public class BPlusTree<TKey, TVal>
         }
     }
 
+    /// <summary>
+    /// Determines whether the tree contains the specified key.
+    /// </summary>
+    /// <param name="key">The key to search for.</param>
+    /// <returns>true if the key is found; otherwise, false.</returns>
     public bool ContainsKey(TKey key)
     {
         var n = FindNodeForKey(key, Root);
@@ -26,6 +73,10 @@ public class BPlusTree<TKey, TVal>
         return n.ContainsKey(key);
     }
 
+    /// <summary>
+    /// Gets the number of key-value pairs in the tree.
+    /// </summary>
+    /// <returns>The number of key-value pairs in the tree.</returns>
     public int Count()
     {
         if (Nodes.Count(n => !n.IsDeleted) == 1)
@@ -36,6 +87,12 @@ public class BPlusTree<TKey, TVal>
         return (int)Nodes.Where(n => !n.IsDeleted && n is LeafNode<TKey, TVal>).Sum(n => n.KeysInUse);
     }
 
+    /// <summary>
+    /// Deletes the key-value pair with the specified key from the tree.
+    /// </summary>
+    /// <param name="key">The key of the key-value pair to delete.</param>
+    /// <returns>The deleted key-value pair.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the specified key is not found in the tree.</exception>
     public (TKey, TVal)? Delete(TKey key)
     {
         var n = FindNodeForKey(key, Root);
@@ -54,61 +111,37 @@ public class BPlusTree<TKey, TVal>
         throw new KeyNotFoundException();
     }
 
+    /// <summary>
+    /// Inserts a key-value pair into the tree.
+    /// </summary>
+    /// <param name="key">The key of the key-value pair to insert.</param>
+    /// <param name="reference">The value of the key-value pair to insert.</param>
     public void Insert(TKey key, TVal reference)
             => InsertTree(key, reference, RootIndexNode);
 
+    /// <summary>
+    /// Inserts a key-value pair into the tree starting from the specified index.
+    /// </summary>
+    /// <param name="key">The key of the key-value pair to insert.</param>
+    /// <param name="r">The value of the key-value pair to insert.</param>
+    /// <param name="index">The index of the node to start the insertion from.</param>
     public void InsertTree(TKey key, TVal r, int index)
     {
-        // get the node specified by the index
         var n = FindNodeForKey(key, Get(index));
         if (n.IsDeleted)
         {
             throw new BPlusTreeException("Attempted to insert into deleted node");
         }
 
-        // if the node is full, split it first, then insert the data to the new subtree root
         SafeInsertToNode(n, key, r);
-        /*
-        if (n.ContainsKey(key))
-        {
-            SafeInsertToNode(n, key, r);
-            return;
-        }
-
-        if (n.IsFull)
-        {
-            var newParent = Split(n, key, r);
-            InsertTree(key, r, newParent);
-        }
-
-        if (n is LeafNode)
-        {
-            SafeInsertToNode(n, key, r);
-            return;
-        }
-
-        // if we get here, we are dealing with an internal node
-        var intN = n as InternalNode;
-
-        var keyIndex = 0;
-        while (intN.Keys[keyIndex] < key && keyIndex < intN.KeysInUse)
-        {
-            keyIndex++;
-        }
-
-        var targetNode = Get(intN.P[keyIndex]);
-        try
-        {
-            targetNode.Insert(key, r);
-        }
-        catch (OverfullNodeException)
-        {
-            var newParent = Split(targetNode, key, r);
-            InsertTree(key, r, newParent);
-        }
-        */
     }
 
+    /// <summary>
+    /// Inserts a key-value pair into the specified node, handling node splitting if necessary.
+    /// </summary>
+    /// <param name="n">The node to insert the key-value pair into.</param>
+    /// <param name="key">The key of the key-value pair to insert.</param>
+    /// <param name="r">The value of the key-value pair to insert.</param>
     public void SafeInsertToNode(Node<TKey, TVal> n, TKey key, TVal r)
     {
         try
@@ -121,12 +154,17 @@ public class BPlusTree<TKey, TVal>
         }
     }
 
+    /// <summary>
+    /// Searches for the node containing the specified key.
+    /// </summary>
+    /// <param name="key">The key to search for.</param>
+    /// <returns>The node containing the key.</returns>
     public Node<TKey, TVal> Search(TKey key) => FindNodeForKey(key, Root);
 
     private int CreateNewInternalNode(TKey key, int leftChild, int rightChild)
     {
-        var n = new InternalNode<TKey, TVal>(new[] { key }, new[] { leftChild, rightChild });
         var newIndex = Nodes.Count;
+        var n = new InternalNode<TKey, TVal>(newIndex, [key], [leftChild, rightChild]);
         Nodes.Add(n);
 
         return newIndex;
@@ -134,8 +172,8 @@ public class BPlusTree<TKey, TVal>
 
     private int CreateNewLeafNode(TKey[] keys, TVal[] items)
     {
-        var n = new LeafNode<TKey, TVal>(keys, items);
         var newIndex = Nodes.Count;
+        var n = new LeafNode<TKey, TVal>(newIndex, keys, items);
         Nodes.Add(n);
 
         return newIndex;
@@ -143,7 +181,6 @@ public class BPlusTree<TKey, TVal>
 
     private Node<TKey, TVal> DeleteNode(Node<TKey, TVal> oldInternalNode)
     {
-        //Nodes.Remove(oldInternalNode);
         oldInternalNode.IsDeleted = true;
 
         return oldInternalNode;
@@ -156,8 +193,6 @@ public class BPlusTree<TKey, TVal>
             return ln;
         }
 
-        // if this n is not a leaf, then we need to search the keys to find the n that contains the
-        // data we are after
         var i = 0;
         while (i < n.KeysInUse && n.Keys[i].CompareTo(key) < 0)
         {
@@ -193,57 +228,17 @@ public class BPlusTree<TKey, TVal>
 
     private long SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
     {
-        // make arrays 1 bigger than the overflowing node, to hold the sorted data
-        var tmpKeys = new TKey[n.KeysInUse + 1];
-        var tmpItems = new TVal[n.KeysInUse + 1];
-
-        // copy contents of node across to the new arrays, inserting the new key
-
-        var indexIntoOldNode = 0;
-        var indexIntoNewNode = 0;
-
-        while (indexIntoOldNode < n.KeysInUse && n.Keys[indexIntoOldNode].CompareTo(newKey) < 0)
-        {
-            tmpKeys[indexIntoNewNode] = n.Keys[indexIntoOldNode];
-            tmpItems[indexIntoNewNode] = n.Items[indexIntoOldNode];
-            indexIntoOldNode++;
-            indexIntoNewNode++;
-        }
-
-        tmpKeys[indexIntoNewNode] = newKey;
-        tmpItems[indexIntoNewNode] = newItem;
-        indexIntoNewNode++;
-        while (indexIntoOldNode < n.KeysInUse)
-        {
-            tmpKeys[indexIntoNewNode] = n.Keys[indexIntoOldNode];
-            tmpItems[indexIntoNewNode] = n.Items[indexIntoOldNode];
-            indexIntoOldNode++;
-            indexIntoNewNode++;
-        }
-
-        var midPoint = tmpKeys.Length / 2;
-        var child1 = CreateNewLeafNode(tmpKeys[..midPoint], tmpItems[..midPoint]);
-        var child2 = CreateNewLeafNode(tmpKeys[midPoint..], tmpItems[midPoint..]);
-        var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint - 1], child1, child2);
-        var oldNode = DeleteNode(n);
-
-        if (Root == oldNode)
+        var midPoint = n.Keys.Length / 2;
+        var c1 = CreateNewLeafNode(n.Keys[midPoint..(int)n.KeysInUse], n.Items[midPoint..(int)n.KeysInUse]);
+        n.KeysInUse = midPoint;
+        var newParentIndex = CreateNewInternalNode(n.Keys[midPoint - 1], n.ID, c1);
+        if (Root == n)
         {
             RootIndexNode = newParentIndex;
         }
-
+        var np = Get(newParentIndex) as InternalNode<TKey, TVal>;
+        Insert(newKey, newItem);
+        //np.Insert(newKey, newItem);
         return newParentIndex;
     }
-
-    /*
-     *                [P,13,P,/,P]
-     *                 |    |
-     *                /      \_______
-     *               /               \
-     *     [P,5,P,10,P]               [P,20,P,/,P]
-     *     /    |     \_               |     \
-     *    /     |       \              |      \
-     * [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
-     *
-     */
 }

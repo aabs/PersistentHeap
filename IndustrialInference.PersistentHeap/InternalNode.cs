@@ -3,19 +3,19 @@ namespace IndustrialInference.BPlusTree;
 public class InternalNode<TKey, TVal> : Node<TKey, TVal>
 where TKey : IComparable<TKey>
 {
-    public InternalNode()
+    public InternalNode(int id):base(id)
     {
         Keys = new TKey[Constants.MaxNodeSize - 1];
         P = new int[Constants.MaxNodeSize];
     }
 
-    public InternalNode(TKey[] keys) : this()
+    public InternalNode(int id, TKey[] keys) : this(id)
     {
         Array.Copy(keys, Keys, keys.Length);
         KeysInUse = keys.Count();
     }
 
-    public InternalNode(TKey[] keys, int[] pointers) : this(keys)
+    public InternalNode(int id, TKey[] keys, int[] pointers) : this(id, keys)
     {
         Array.Copy(pointers, P, pointers.Length);
     }
