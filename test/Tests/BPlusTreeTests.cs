@@ -1,27 +1,79 @@
+#pragma warning disable IDE1006 // Naming Styles
 namespace PersistentHeap.Tests;
 
 public class BPlusTreeTests
 {
-    [Property]
-    public void searching_for_a_key_returns_the_same_value_as_was_inserted(Dictionary<int, string> testData)
+    public record KeyValuePair<TKey, TVal>(TKey Key, TVal Value);
+
+    #region Testing Search Capabilities
+
+    [Fact]
+    public void a_tree_with_a_large_number_of_entries_can_find_each_element()
     {
-        // trivial case
-        if (testData.Count == 0)
+        var sut = new BPlusTree<long, long>();
+        for (var i = 0; i < 100000; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+
+        for (var i = 0; i < 100000; i++)
+        {
+            Assert.Equal(i * 10, sut[i]);
+        }
+    }
+
+    [Property]
+    public void a_tree_with_many_entries_can_find_each_element(KeyValuePair<int, int>[] testData)
+    {
+        // must be unique keys
+        if (testData.Select(x => x.Key).Distinct().Count() < testData.Length)
         {
             return;
         }
 
-        var sut = new BPlusTree<int, string>();
-        foreach (var x in testData.Keys)
+        var sut = new BPlusTree<int, int>();
+        foreach (var x in testData)
         {
-            sut.Insert(x, testData[x]);
+            sut.Insert(x.Key, x.Value);
         }
 
-        var valToFind = testData.Keys.ElementAt(0);
-        var foundValue = sut[valToFind];
-        //foundValue.Should().NotBeNull();
-        Assert.Equal(foundValue, testData[valToFind]);
+        foreach (var x in testData)
+        {
+            Assert.Equal(x.Value, sut[x.Key]);
+        }
     }
+
+    [Property]
+    public void a_tree_with_one_entry_can_search_for_the_value(int k, int v)
+    {
+        var sut = new BPlusTree<int, int>();
+        sut.Insert(k, v);
+        Assert.Equal(v, sut[k]);
+    }
+
+    [Property]
+    public void inserting_duplicate_keys_leaves_last_value_in_tree(int k, int v1, int v2)
+    {
+        if (v1 == v2)
+        {
+            return;
+        }
+
+        var sut = new BPlusTree<int, int>();
+        sut.Insert(k, v1);
+        sut.Insert(k, v2);
+        Assert.Equal(v2, sut[k]);
+    }
+
+    [Property]
+    public void searching_an_empty_tree_always_throws_KeyNotFoundException(long x)
+    {
+        var sut = new BPlusTree<long, long>();
+        Assert.Throws<KeyNotFoundException>(() => sut[x]);
+    }
+
+    #endregion
+
 
     [Property]
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree(int[] xs)
@@ -104,6 +156,7 @@ public class BPlusTreeTests
     public void adding_a_known_value_into_a_tree_leaves_the_tree_with_the_same_Count_as_before__case_1()
     {
         int[] xs = [-1, 2, 0, 3, -2, 1, 4, -3, -4];
+
         // trivial case
         if (xs.Length == 0)
         {
@@ -200,6 +253,7 @@ public class BPlusTreeTests
             {
                 var sut = new BPlusTree<long, long>();
                 sut.Insert(i, i);
+
                 return sut.Count() == 1;
             })
             .QuickCheckThrowOnFailure();
@@ -350,4 +404,27 @@ public class BPlusTreeTests
         var newVal = xs.Length == 0 ? 1 : xs.Max() + 1;
         Assert.Throws<KeyNotFoundException>(() => sut.Delete(newVal));
     }
+
+    [Property]
+    public void searching_for_a_key_returns_the_same_value_as_was_inserted(Dictionary<int, string> testData)
+    {
+        // trivial case
+        if (testData.Count == 0)
+        {
+            return;
+        }
+
+        var sut = new BPlusTree<int, string>();
+        foreach (var x in testData.Keys)
+        {
+            sut.Insert(x, testData[x]);
+        }
+
+        var valToFind = testData.Keys.ElementAt(0);
+        var foundValue = sut[valToFind];
+
+        //foundValue.Should().NotBeNull();
+        Assert.Equal(foundValue, testData[valToFind]);
+    }
 }
+#pragma warning restore IDE1006 // Naming Styles

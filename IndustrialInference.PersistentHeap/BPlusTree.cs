@@ -9,6 +9,23 @@ public class BPlusTree<TKey, TVal>
     public Node<TKey, TVal> Root => Nodes[RootIndexNode];
     public int RootIndexNode { get; private set; }
 
+    public TVal? this[TKey key]
+    {
+        get
+        {
+            var n = FindNodeForKey(key, Root);
+
+            return n[key];
+        }
+    }
+
+    public bool ContainsKey(TKey key)
+    {
+        var n = FindNodeForKey(key, Root);
+
+        return n.ContainsKey(key);
+    }
+
     public int Count()
     {
         if (Nodes.Count(n => !n.IsDeleted) == 1)
@@ -19,20 +36,26 @@ public class BPlusTree<TKey, TVal>
         return (int)Nodes.Where(n => !n.IsDeleted && n is LeafNode<TKey, TVal>).Sum(n => n.KeysInUse);
     }
 
-    public void Insert(TKey key, TVal reference)
-        => InsertTree(key, reference, RootIndexNode);
-
-    public void SafeInsertToNode(Node<TKey, TVal> n, TKey key, TVal r)
+    public (TKey, TVal)? Delete(TKey key)
     {
-        try
+        var n = FindNodeForKey(key, Root);
+
+        for (var i = 0; i < n.KeysInUse; i++)
         {
-            n.Insert(key, r);
+            if (n.Keys[i].CompareTo(key) == 0)
+            {
+                var r = n.Items[i];
+                n.Delete(key);
+
+                return (key, r);
+            }
         }
-        catch (OverfullNodeException)
-        {
-            Split(n, key, r);
-        }
+
+        throw new KeyNotFoundException();
     }
+
+    public void Insert(TKey key, TVal reference)
+            => InsertTree(key, reference, RootIndexNode);
 
     public void InsertTree(TKey key, TVal r, int index)
     {
@@ -86,6 +109,18 @@ public class BPlusTree<TKey, TVal>
         */
     }
 
+    public void SafeInsertToNode(Node<TKey, TVal> n, TKey key, TVal r)
+    {
+        try
+        {
+            n.Insert(key, r);
+        }
+        catch (OverfullNodeException)
+        {
+            Split(n, key, r);
+        }
+    }
+
     public Node<TKey, TVal> Search(TKey key) => FindNodeForKey(key, Root);
 
     private int CreateNewInternalNode(TKey key, int leftChild, int rightChild)
@@ -93,6 +128,7 @@ public class BPlusTree<TKey, TVal>
         var n = new InternalNode<TKey, TVal>(new[] { key }, new[] { leftChild, rightChild });
         var newIndex = Nodes.Count;
         Nodes.Add(n);
+
         return newIndex;
     }
 
@@ -101,20 +137,27 @@ public class BPlusTree<TKey, TVal>
         var n = new LeafNode<TKey, TVal>(keys, items);
         var newIndex = Nodes.Count;
         Nodes.Add(n);
+
         return newIndex;
     }
 
-    private Node<TKey, TVal> Get(int id) => Nodes[(int)id];
+    private Node<TKey, TVal> DeleteNode(Node<TKey, TVal> oldInternalNode)
+    {
+        //Nodes.Remove(oldInternalNode);
+        oldInternalNode.IsDeleted = true;
 
-    private Node<TKey, TVal> GetIndirect(int id, InternalNode<TKey, TVal> n) => Nodes[(int)n.P[id]];
+        return oldInternalNode;
+    }
 
     private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)
     {
         if (n is LeafNode<TKey, TVal> ln)
+        {
             return ln;
+        }
 
-        // if this n is not a leaf, then we need to search the keys to
-        // find the n that contains the data we are after
+        // if this n is not a leaf, then we need to search the keys to find the n that contains the
+        // data we are after
         var i = 0;
         while (i < n.KeysInUse && n.Keys[i].CompareTo(key) < 0)
         {
@@ -122,8 +165,13 @@ public class BPlusTree<TKey, TVal>
         }
 
         var n2 = GetIndirect(i, (InternalNode<TKey, TVal>)n);
+
         return FindNodeForKey(key, n2);
     }
+
+    private Node<TKey, TVal> Get(int id) => Nodes[(int)id];
+
+    private Node<TKey, TVal> GetIndirect(int id, InternalNode<TKey, TVal> n) => Nodes[(int)n.P[id]];
 
     private long Split(Node<TKey, TVal> n, TKey newKey, TVal newRef)
     {
@@ -140,7 +188,8 @@ public class BPlusTree<TKey, TVal>
         throw new BPlusTreeException("Unrecognised node type");
     }
 
-    private long SplitInternalNode(InternalNode<TKey, TVal> n, TKey newKey, TVal newRef) => throw new NotImplementedException();
+    private long SplitInternalNode(InternalNode<TKey, TVal> n, TKey newKey, TVal newRef) =>
+        throw new NotImplementedException();
 
     private long SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
     {
@@ -172,37 +221,18 @@ public class BPlusTree<TKey, TVal>
             indexIntoNewNode++;
         }
 
-
-        //for (var i = n.Keys.Length-1; i > 0; i--)
-        //{
-        //    if (n.Keys[i] < newKey)
-        //    {
-        //        tmpKeys[i + 1] = newKey;
-        //    }
-        //    else
-        //    {
-        //        tmpKeys[i + 1] = n.Keys[i];
-        //    }
-        //}
-
         var midPoint = tmpKeys.Length / 2;
         var child1 = CreateNewLeafNode(tmpKeys[..midPoint], tmpItems[..midPoint]);
         var child2 = CreateNewLeafNode(tmpKeys[midPoint..], tmpItems[midPoint..]);
         var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint - 1], child1, child2);
         var oldNode = DeleteNode(n);
+
         if (Root == oldNode)
         {
             RootIndexNode = newParentIndex;
         }
 
         return newParentIndex;
-    }
-
-    private Node<TKey, TVal> DeleteNode(Node<TKey, TVal> oldInternalNode)
-    {
-        //Nodes.Remove(oldInternalNode);
-        oldInternalNode.IsDeleted = true;
-        return oldInternalNode;
     }
 
     /*
@@ -216,39 +246,4 @@ public class BPlusTree<TKey, TVal>
      * [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
      *
      */
-
-    public (TKey, TVal)? Delete(TKey key)
-    {
-        var n = FindNodeForKey(key, Root);
-
-        for (var i = 0; i < n.KeysInUse; i++)
-        {
-            if (n.Keys[i].CompareTo(key) == 0)
-            {
-                var r = n.Items[i];
-                n.Delete(key);
-                return (key, r);
-            }
-        }
-
-        throw new KeyNotFoundException();
-    }
-
-    public bool ContainsKey(TKey key)
-    {
-        var n = FindNodeForKey(key, Root);
-        return n.ContainsKey(key);
-    }
-
-    public TVal? this[TKey key]
-    {
-        get
-        {
-            var n = FindNodeForKey(key, Root);
-
-            return n[key];
-        }
-    }
-
-
 }

@@ -118,10 +118,10 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
     {
         get
         {
-            var index = Array.IndexOf(Keys, key);
+            var index = Array.IndexOf(Keys[..(int)KeysInUse], key);
             if (index == -1)
             {
-                return default;
+                throw new KeyNotFoundException();
             }
             return Items[index];
         }
