@@ -18,7 +18,14 @@ public class BPlusTreeTests
 
         for (var i = 0; i < 100000; i++)
         {
-            Assert.Equal(i * 10, sut[i]);
+            try
+            {
+                Assert.Equal(i * 10, sut[i]);
+            }
+            catch (KeyNotFoundException)
+            {
+                Assert.Fail();
+            }
         }
     }
 
