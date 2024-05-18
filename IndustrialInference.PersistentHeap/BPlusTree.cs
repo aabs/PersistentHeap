@@ -41,6 +41,12 @@ public class BPlusTree<TKey, TVal>
     /// </summary>
     public Node<TKey, TVal> Root => Nodes[RootIndexNode];
 
+    public IEnumerable<LeafNode<TKey, TVal>> LeafNodes
+        => Nodes.Where(n => n is LeafNode<TKey, TVal>).Cast<LeafNode<TKey, TVal>>();
+
+    public IEnumerable<InternalNode<TKey, TVal>> InternalNodes
+        => Nodes.Where(n => n is InternalNode<TKey, TVal>).Cast<InternalNode<TKey, TVal>>();
+
     /// <summary>
     /// Gets or sets the index of the root node.
     /// </summary>
@@ -79,12 +85,7 @@ public class BPlusTree<TKey, TVal>
     /// <returns>The number of key-value pairs in the tree.</returns>
     public int Count()
     {
-        if (Nodes.Count(n => !n.IsDeleted) == 1)
-        {
-            return (int)Root.KeysInUse;
-        }
-
-        return (int)Nodes.Where(n => !n.IsDeleted && n is LeafNode<TKey, TVal>).Sum(n => n.KeysInUse);
+        return LeafNodes.Sum(n => (int)n.KeysInUse);
     }
 
     /// <summary>
@@ -128,11 +129,6 @@ public class BPlusTree<TKey, TVal>
     public void InsertTree(TKey key, TVal r, int index)
     {
         var n = FindNodeForKey(key, Get(index));
-        if (n.IsDeleted)
-        {
-            throw new BPlusTreeException("Attempted to insert into deleted node");
-        }
-
         SafeInsertToNode(n, key, r);
     }
 
@@ -177,13 +173,6 @@ public class BPlusTree<TKey, TVal>
         Nodes.Add(n);
 
         return newIndex;
-    }
-
-    private Node<TKey, TVal> DeleteNode(Node<TKey, TVal> oldInternalNode)
-    {
-        oldInternalNode.IsDeleted = true;
-
-        return oldInternalNode;
     }
 
     private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)

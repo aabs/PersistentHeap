@@ -14,8 +14,13 @@ public abstract class Node<TKey, TVal>
     public bool IsEmpty => KeysInUse == 0;
     public bool IsFull => KeysInUse == Constants.MaxNodeSize;
     public long KeysInUse { get; set; }
-    public bool IsDeleted { get; set; }
     public bool ContainsKey(TKey key) => Keys[..(int)KeysInUse].Contains(key);
     public abstract void Delete(TKey k);
     public abstract void Insert(TKey k, TVal r, bool overwriteOnEquality = true);
+
+    #region Linkage
+    public int? ParentNode { get; set; }
+    public int? PreviousNode { get; set; }
+    public int? NextNode { get; set; }
+    #endregion
 }

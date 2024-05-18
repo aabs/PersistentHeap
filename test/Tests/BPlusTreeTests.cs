@@ -226,8 +226,8 @@ public class BPlusTreeTests
             Constants.MaxNodeSize); // any other number would do, but we know this isn't in the list
         sut.Nodes.Count.Should().Be(1);
         sut.Root.IsFull.Should().BeFalse();
-        sut.Nodes.Count(n => n.IsDeleted).Should().Be(0);
-        sut.Nodes.Count(n => !n.IsDeleted).Should().Be(1);
+        sut.InternalNodes.Count().Should().Be(0);
+        sut.LeafNodes.Count().Should().Be(1);
     }
 
     [Property]
@@ -250,8 +250,8 @@ public class BPlusTreeTests
 
         sut.Nodes.Count.Should().Be(3);
         sut.Root.IsFull.Should().BeFalse();
-        sut.Nodes.Count(n => n.IsDeleted).Should().Be(0);
-        sut.Nodes.Count(n => !n.IsDeleted).Should().Be(3);
+        sut.InternalNodes.Count().Should().Be(1);
+        sut.LeafNodes.Count().Should().Be(2);
     }
 
     [Fact]
