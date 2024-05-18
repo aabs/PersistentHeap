@@ -19,8 +19,8 @@ public abstract class Node<TKey, TVal>
     public abstract void Insert(TKey k, TVal r, bool overwriteOnEquality = true);
 
     #region Linkage
-    public int? ParentNode { get; set; }
-    public int? PreviousNode { get; set; }
-    public int? NextNode { get; set; }
+    public int? ParentNode { get; set; } = -1;
+    public int? PreviousNode { get; set; } = -1;
+    public int? NextNode { get; set; } = -1;
     #endregion
 }

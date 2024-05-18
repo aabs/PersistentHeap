@@ -129,17 +129,6 @@ public class BPlusTree<TKey, TVal>
     public void InsertTree(TKey key, TVal r, int index)
     {
         var n = FindNodeForKey(key, Get(index));
-        SafeInsertToNode(n, key, r);
-    }
-
-    /// <summary>
-    /// Inserts a key-value pair into the specified node, handling node splitting if necessary.
-    /// </summary>
-    /// <param name="n">The node to insert the key-value pair into.</param>
-    /// <param name="key">The key of the key-value pair to insert.</param>
-    /// <param name="r">The value of the key-value pair to insert.</param>
-    public void SafeInsertToNode(Node<TKey, TVal> n, TKey key, TVal r)
-    {
         try
         {
             n.Insert(key, r);
@@ -157,22 +146,22 @@ public class BPlusTree<TKey, TVal>
     /// <returns>The node containing the key.</returns>
     public Node<TKey, TVal> Search(TKey key) => FindNodeForKey(key, Root);
 
-    private int CreateNewInternalNode(TKey key, int leftChild, int rightChild)
+    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey key, int leftChild, int rightChild)
     {
         var newIndex = Nodes.Count;
         var n = new InternalNode<TKey, TVal>(newIndex, [key], [leftChild, rightChild]);
         Nodes.Add(n);
 
-        return newIndex;
+        return n;
     }
 
-    private int CreateNewLeafNode(TKey[] keys, TVal[] items)
+    private LeafNode<TKey, TVal> CreateNewLeafNode(TKey[] keys, TVal[] items)
     {
         var newIndex = Nodes.Count;
         var n = new LeafNode<TKey, TVal>(newIndex, keys, items);
         Nodes.Add(n);
 
-        return newIndex;
+        return n;
     }
 
     private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)
@@ -197,7 +186,7 @@ public class BPlusTree<TKey, TVal>
 
     private Node<TKey, TVal> GetIndirect(int id, InternalNode<TKey, TVal> n) => Nodes[(int)n.P[id]];
 
-    private long Split(Node<TKey, TVal> n, TKey newKey, TVal newRef)
+    private InternalNode<TKey, TVal> Split(Node<TKey, TVal> n, TKey newKey, TVal newRef)
     {
         if (n is LeafNode<TKey, TVal> ln)
         {
@@ -212,22 +201,21 @@ public class BPlusTree<TKey, TVal>
         throw new BPlusTreeException("Unrecognised node type");
     }
 
-    private long SplitInternalNode(InternalNode<TKey, TVal> n, TKey newKey, TVal newRef) =>
+    private InternalNode<TKey, TVal> SplitInternalNode(InternalNode<TKey, TVal> n, TKey newKey, TVal newRef) =>
         throw new NotImplementedException();
 
-    private long SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
+    private InternalNode<TKey, TVal> SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
     {
         var midPoint = n.Keys.Length / 2;
         var c1 = CreateNewLeafNode(n.Keys[midPoint..(int)n.KeysInUse], n.Items[midPoint..(int)n.KeysInUse]);
         n.KeysInUse = midPoint;
-        var newParentIndex = CreateNewInternalNode(n.Keys[midPoint - 1], n.ID, c1);
+        var newParent = CreateNewInternalNode(n.Keys[midPoint - 1], n.ID, c1.ID);
         if (Root == n)
         {
-            RootIndexNode = newParentIndex;
+            RootIndexNode = newParent.ID;
         }
-        var np = Get(newParentIndex) as InternalNode<TKey, TVal>;
         Insert(newKey, newItem);
         //np.Insert(newKey, newItem);
-        return newParentIndex;
+        return newParent;
     }
 }
