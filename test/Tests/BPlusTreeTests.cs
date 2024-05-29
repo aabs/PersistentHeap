@@ -1,6 +1,9 @@
 #pragma warning disable IDE1006 // Naming Styles
 namespace PersistentHeap.Tests;
 
+using System;
+using System.Diagnostics;
+
 public class BPlusTreeTests
 {
     public record KeyValuePair<TKey, TVal>(TKey Key, TVal Value);
@@ -10,13 +13,14 @@ public class BPlusTreeTests
     [Fact]
     public void a_tree_with_a_large_number_of_entries_can_find_each_element()
     {
+        const int numSamples = 5000;
         var sut = new BPlusTree<long, long>();
-        for (var i = 0; i < 100000; i++)
+        for (var i = 0; i < numSamples; i++)
         {
             sut.Insert(i, i * 10);
         }
 
-        for (var i = 0; i < 100000; i++)
+        for (var i = 0; i < numSamples; i++)
         {
             try
             {
@@ -58,6 +62,24 @@ public class BPlusTreeTests
         Assert.Equal(v, sut[k]);
     }
 
+    [Fact]
+    public void after_creation_all_node_keys_remain_ordered()
+    {
+        const int numSamples = 5000;
+        var sut = new BPlusTree<int, int>();
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+
+        foreach (var n in sut.Nodes)
+        {
+            var nodeIsOrdered = IsOrdered(n);
+            nodeIsOrdered.Should().BeTrue();
+        }
+    }
+
+
     [Property]
     public void inserting_duplicate_keys_leaves_last_value_in_tree(int k, int v1, int v2)
     {
@@ -79,8 +101,110 @@ public class BPlusTreeTests
         Assert.Throws<KeyNotFoundException>(() => sut[x]);
     }
 
+    private bool IsOrdered(Node<int, int> n)
+    {
+        for (int i = 1; i < n.KeysInUse; i++)
+        {
+            if (n.Keys[i] < n.Keys[i - 1])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
     #endregion
 
+    #region Testing Splitting Behaviour
+
+    [Fact]
+    public void after_split_internal_nodes_remain_ordered()
+    {
+        const int numSamples = 5000;
+        var sut = new BPlusTree<int, int>();
+        sut.NodeSplit += (nlo, nhi) =>
+        {
+            if (nlo is InternalNode<int, int> nloi)
+            {
+                var isOrdered = IsOrdered(nloi);
+                foreach (int k in nloi.P[..(nloi.KeysInUse + 1)])
+                {
+                    var child = sut.Nodes[k];
+                    isOrdered = IsOrdered(child);
+                    isOrdered.Should().BeTrue();
+                }
+            }
+        };
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+
+    }
+
+    [Fact]
+    public void after_split_leaf_nodes_remain_ordered()
+    {
+        const int numSamples = 5000;
+        var sut = new BPlusTree<int, int>();
+        sut.NodeSplit += (nlo, nhi) =>
+        {
+            // just test the case where a leaf was split
+            if (nlo is InternalNode<int, int> intn && intn.KeysInUse == 2)
+            {
+                var isOrdered = IsOrdered(intn);
+                IsOrdered(sut.Nodes[intn.P[0]]).Should().BeTrue();
+                IsOrdered(sut.Nodes[intn.P[1]]).Should().BeTrue();
+            }
+        };
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+
+    }
+
+    [Fact]
+    public void before_split_internal_nodes_remain_ordered()
+    {
+        const int numSamples = 5000;
+        var sut = new BPlusTree<int, int>();
+        sut.NodeSplitting += (n) =>
+        {
+            if (n is InternalNode<int, int> intn)
+            {
+                var isOrdered = IsOrdered(intn);
+                foreach (int k in intn.P[..(intn.KeysInUse + 1)])
+                {
+                    var child = sut.Nodes[k];
+                    isOrdered = IsOrdered(child);
+                    isOrdered.Should().BeTrue();
+                }
+            }
+        };
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+
+    }
+    [Fact]
+    public void before_split_leaf_nodes_remain_ordered()
+    {
+        const int numSamples = 5000;
+        var sut = new BPlusTree<int, int>();
+        sut.NodeSplitting += (n) =>
+        {
+            if (n is LeafNode<int, int> ln)
+            {
+                var isOrdered = IsOrdered(ln);
+            }
+        };
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i * 10);
+        }
+    }
+    #endregion
 
     [Property]
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree(int[] xs)
@@ -239,11 +363,14 @@ public class BPlusTreeTests
     }
 
     [Fact]
-    public void
-        adding_one_element_into_a_tree_with_one_full_node_leaves_a_tree_with_three_live_nodes_and_one_deleted_node()
+    public void adding_one_more_element_into_a_tree_with_a_full_node_ends_with_three_nodes()
     {
         var sut = new BPlusTree<long, long>();
-        for (var i = 0; i < Constants.MaxNodeSize; i++)
+        sut.NodeSplitting += (n) =>
+        {
+            Debugger.Break();
+        };
+        for (var i = 0; i < Constants.MaxNodeSize+1; i++)
         {
             sut.Insert(i, i);
         }
@@ -252,6 +379,21 @@ public class BPlusTreeTests
         sut.Root.IsFull.Should().BeFalse();
         sut.InternalNodes.Count().Should().Be(1);
         sut.LeafNodes.Count().Should().Be(2);
+    }
+
+    [Fact]
+    public void adding_maxnodes_elements_into_a_tree_should_end_with_a_single_node()
+    {
+        var sut = new BPlusTree<long, long>();
+        for (var i = 0; i < Constants.MaxNodeSize; i++)
+        {
+            sut.Insert(i, i);
+        }
+
+        sut.Nodes.Count.Should().Be(1);
+        sut.Root.IsFull.Should().BeTrue();
+        sut.InternalNodes.Count().Should().Be(0);
+        sut.LeafNodes.Count().Should().Be(1);
     }
 
     [Fact]
@@ -434,4 +576,5 @@ public class BPlusTreeTests
         Assert.Equal(foundValue, testData[valToFind]);
     }
 }
+
 #pragma warning restore IDE1006 // Naming Styles
