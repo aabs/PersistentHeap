@@ -24,7 +24,7 @@ public class LeafNodePropertyTests
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
     public void adding_a_new_key_to_a_non_full_node_increases_keys_by_one(int[] xs)
     {
-        if (xs.Length > Constants.MaxNodeSize)
+        if (xs.Length > Constants.MaxKeysPerNode)
         {
             return;
         }
@@ -118,7 +118,7 @@ public static class IntArrayArbitrary
 {
     public static Arbitrary<int[]> Values()
     {
-        var size = Random.Shared.Next(2, (int)Constants.MaxNodeSize);
+        var size = Random.Shared.Next(2, (int)Constants.MaxKeysPerNode);
         return Arb.Generate<int>().ArrayOf(size).ToArbitrary();
     }
 }
@@ -126,7 +126,7 @@ public static class IntArrayOfUniqueValuesArbitrary
 {
     public static Arbitrary<int[]> Values()
     {
-        var size = Random.Shared.Next(2, (int)Constants.MaxNodeSize);
+        var size = Random.Shared.Next(2, (int)Constants.MaxKeysPerNode);
         var result = Enumerable.Range(0, size).ToArray();
         Random.Shared.Shuffle(result);
         return Gen.Constant(result).ToArbitrary();

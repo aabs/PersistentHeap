@@ -11,71 +11,40 @@ public abstract class Node<TKey, TVal>
     {
         ID = id;
     }
+
+    public int Count => KeysInUse;
     public int ID { get; init; }
 
-    public TKey[] Keys { get; set; }
-    public int Count => KeysInUse;
     public bool IsEmpty => KeysInUse == 0;
-    public bool IsFull => KeysInUse == Constants.MaxNodeSize;
+    public bool IsFull => KeysInUse == Constants.MaxKeysPerNode;
+    public TKey[] Keys { get; set; }
     public int KeysInUse { get => _keysInUse; set => _keysInUse = value; }
+
     public abstract void Delete(TKey k);
-    public virtual void Insert(TKey k, TVal r, bool overwriteOnEquality = true) { }
+
+    public virtual void Insert(TKey k, TVal r, bool overwriteOnEquality = true)
+    { }
 
     #region Searching
-    public bool ContainsKey(TKey key) => FindElementIndexByBinarySearch(Keys, (int)KeysInUse, key) != -1;
-    protected int FindInsertionPointByBinarySearch<T>(T[] array, int valuesInUse, T value)
-    where T : IComparable<T>
-    {
-        int low = 0;
-        int high = valuesInUse-1;
-        while (low <= high)
-        {
-            int mid = (low + high) / 2;
-            if (array[mid].CompareTo(value) == 0)
-            {
-                return mid;
-            }
-            if (array[mid].CompareTo(value) < 0)
-            {
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-        return low;
-    }
-    protected int FindElementIndexByBinarySearch<T>(T[] array, int valuesInUse, T value)
+
+    public (TKey, TKey) KeyRange => (Keys[0], Keys[KeysInUse - 1]);
+
+    public bool ContainsKey(TKey key) => Array.BinarySearch(Keys[..KeysInUse], key) >= 0;
+
+    protected int FindInsertionPoint<T>(T[] array, int valuesInUse, T value)
         where T : IComparable<T>
     {
-        int low = 0;
-        int high = valuesInUse - 1;
-        while (low <= high)
-        {
-            int mid = (low + high) / 2;
-            if (array[mid].CompareTo(value) == 0)
-            {
-                return mid;
-            }
-            if (array[mid].CompareTo(value) < 0)
-            {
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-        return -1;
+        var idx = Array.BinarySearch(array[..valuesInUse], value);
+        return idx >= 0 ? idx : ~idx;
     }
 
+    #endregion Searching
 
-    #endregion
     #region Linkage
+
+    public int NextNode { get; set; } = -1;
     public int ParentNode { get; set; } = -1;
     public int PreviousNode { get; set; } = -1;
-    public int NextNode { get; set; } = -1;
-    #endregion
 
+    #endregion Linkage
 }

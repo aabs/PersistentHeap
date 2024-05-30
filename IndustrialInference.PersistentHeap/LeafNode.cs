@@ -5,8 +5,8 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
 {
     public LeafNode(int id) : base(id)
     {
-        Keys = new TKey[Constants.MaxNodeSize];
-        Items = new TVal[Constants.MaxNodeSize];
+        Keys = new TKey[Constants.MaxKeysPerNode];
+        Items = new TVal[Constants.MaxKeysPerNode];
     }
 
     public LeafNode(int id, TKey[] keys, TVal[] items) : this(id)
@@ -22,7 +22,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
     {
         get
         {
-            var index = Array.IndexOf(Keys[..(int)KeysInUse], key);
+            var index = Array.IndexOf(Keys[..KeysInUse], key);
             if (index == -1)
             {
                 throw new KeyNotFoundException();
@@ -66,8 +66,8 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
 
     public override void Insert(TKey k, TVal r, bool overwriteOnEquality = true)
     {
-        var indexOfKey = FindElementIndexByBinarySearch(Keys, (int)KeysInUse, k);
-        var knownKey = indexOfKey != -1;
+        var indexOfKey =  Array.BinarySearch(Keys[..KeysInUse], k);
+        var knownKey = indexOfKey >= 0;
 
         if (knownKey && !overwriteOnEquality)
         {
@@ -99,7 +99,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
         // if we get here, then we have space for a not-previously-seen key.
         // Let's work out where to put it
 
-        var insertionIndex = FindInsertionPointByBinarySearch(Keys, (int)KeysInUse, k);
+        var insertionIndex = FindInsertionPoint(Keys, (int)KeysInUse, k);
 
         // this is the index of the first element in the collection that is
         // LARGER than the value k. Our response is to move that element and everything

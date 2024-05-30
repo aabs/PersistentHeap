@@ -1,5 +1,8 @@
 namespace IndustrialInference.BPlusTree;
 
+using System.Diagnostics;
+using System.Net;
+
 /// <summary>
 ///   Represents a B+ tree data structure.
 /// </summary>
@@ -14,14 +17,14 @@ namespace IndustrialInference.BPlusTree;
 ///     <code>
 ///<![CDATA[
 ///
-///[P,13,P,/,P]
-///|    |
-////      \_______
-////               \
-///[P,5,P,10,P]               [P,20,P,/,P]
-////    |     \_               |     \
-////     |       \              |      \
-///[1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
+///       [P,13,P,/,P]
+///        |    |
+///       /      \_________________
+///      /                         \
+///     [P,5,P,10,P]               [P,20,P,/,P]
+///     /    |     \_               |     \
+///    /     |       \              |      \
+///   [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
 ///]]>
 ///     </code>
 ///   </para>
@@ -29,10 +32,19 @@ namespace IndustrialInference.BPlusTree;
 public class BPlusTree<TKey, TVal>
     where TKey : IComparable<TKey>
 {
+    private readonly TKey? defaultKey;
+    private readonly TVal? defaultValue;
+    #region Public interface
+
     /// <summary>
     ///   Initializes a new instance of the <see cref="BPlusTree{TKey, TVal}" /> class.
     /// </summary>
-    public BPlusTree() => Nodes = [new LeafNode<TKey, TVal>(0)];
+    public BPlusTree(TKey? defaultKey = default, TVal? defaultValue = default)
+    {
+        Nodes = [new LeafNode<TKey, TVal>(0)];
+        this.defaultKey = defaultKey;
+        this.defaultValue = defaultValue;
+    }
 
     public IEnumerable<InternalNode<TKey, TVal>> InternalNodes
             => Nodes.Where(n => n is InternalNode<TKey, TVal>).Cast<InternalNode<TKey, TVal>>();
@@ -137,11 +149,11 @@ public class BPlusTree<TKey, TVal>
     /// <param name="key">
     ///   The key of the key-value pair to insert.
     /// </param>
-    /// <param name="reference">
+    /// <param name="value">
     ///   The value of the key-value pair to insert.
     /// </param>
-    public void Insert(TKey key, TVal reference)
-            => InsertTree(key, reference, RootIndexNode);
+    public void Insert(TKey key, TVal value)
+            => Insert(key, value, RootIndexNode);
 
     public void InsertIntoInternalNode(TKey key, InternalNode<TKey, TVal> nodeToInsertInto, Node<TKey, TVal> nodeToInsert)
     {
@@ -161,22 +173,22 @@ public class BPlusTree<TKey, TVal>
     /// <param name="key">
     ///   The key of the key-value pair to insert.
     /// </param>
-    /// <param name="r">
+    /// <param name="value">
     ///   The value of the key-value pair to insert.
     /// </param>
     /// <param name="index">
     ///   The index of the node to start the insertion from.
     /// </param>
-    public void InsertTree(TKey key, TVal r, int index)
+    public void Insert(TKey key, TVal value, int index)
     {
         var n = FindNodeForKey(key, Get(index));
         try
         {
-            n.Insert(key, r);
+            n.Insert(key, value);
         }
         catch (OverfullNodeException)
         {
-            SplitLeafNode(n, key, r);
+            SplitLeafNode(n, key, value);
         }
     }
 
@@ -191,10 +203,27 @@ public class BPlusTree<TKey, TVal>
     /// </returns>
     public Node<TKey, TVal> Search(TKey key) => FindNodeForKey(key, Root);
 
+    public IEnumerable<TKey> AllKeys()
+    {
+        return AllLeafNodes().SelectMany(x => x.Keys[..x.KeysInUse]);
+    }
+    public IEnumerable<TVal> AllItems()
+    {
+        return AllLeafNodes().SelectMany(x => x.Items[..x.KeysInUse]);
+    }
+    #endregion Public interface
+
+    #region Node Manipulation
+
     private InternalNode<TKey, TVal> CreateNewInternalNode(TKey key, int leftChild, int rightChild)
     {
         var newIndex = Nodes.Count;
         var n = new InternalNode<TKey, TVal>(newIndex, [key], [leftChild, rightChild]);
+#if WIPE_UNUSED
+        Array.Fill(n.Keys, defaultKey ?? default, 1, n.Keys.Length - 1);
+        Array.Fill(n.P, -1, 2, n.P.Length - 2);
+#endif
+
         Nodes.Add(n);
 
         return n;
@@ -217,35 +246,6 @@ public class BPlusTree<TKey, TVal>
         return n;
     }
 
-    private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)
-    {
-        if (n is LeafNode<TKey, TVal> ln)
-        {
-            return ln;
-        }
-
-        var i = 0;
-        while (i < n.KeysInUse && n.Keys[i].CompareTo(key) < 0)
-        {
-            i++;
-        }
-
-        var n2 = GetIndirect(i, (InternalNode<TKey, TVal>)n);
-
-        return FindNodeForKey(key, n2);
-    }
-
-    private Node<TKey, TVal>? Get(int id)
-    {
-        if (id < 0 || id > Nodes.Count)
-        {
-            return null;
-        }
-        return Nodes[id];
-    }
-
-    private Node<TKey, TVal> GetIndirect(int id, InternalNode<TKey, TVal> n) => Nodes[(int)n.P[id]];
-
     private InternalNode<TKey, TVal> SplitInternalNode(InternalNode<TKey, TVal> nlo, TKey newKey, int newRef)
     {
         OnNodeSplitting(nlo);
@@ -257,8 +257,13 @@ public class BPlusTree<TKey, TVal>
         nlo.KeysInUse = midPoint;
         nhi.ParentNode = nlo.ParentNode;
 
+#if WIPE_UNUSED
+        Array.Fill(nlo.Keys[midPoint..], defaultKey ?? default);
+        Array.Fill(nlo.P[midPoint..], -1);
+#endif
+
         // 3. update parent ID of all transferred children
-        foreach (var n in nhi.P[..(int)nhi.KeysInUse].Select(nodeId => Get(nodeId)))
+        foreach (var n in nhi.P[..nhi.KeysInUse].Select(nodeId => Get(nodeId)))
         {
             if (n is not null)
             {
@@ -296,6 +301,11 @@ public class BPlusTree<TKey, TVal>
         var midPoint = n.Keys.Length / 2;
         var nhi = CreateNewLeafNode(n.Keys[midPoint..], n.Items[midPoint..]);
         n.KeysInUse = midPoint;
+
+#if WIPE_UNUSED
+        Array.Fill<TKey>(n.Keys, defaultKey ?? default, midPoint, n.Keys.Length - midPoint);
+        Array.Fill<TVal>(n.Items, defaultValue ?? default, midPoint, n.Items.Length - midPoint);
+#endif
 
         // wire up the nodes
         nhi.NextNode = n.NextNode;
@@ -338,9 +348,132 @@ public class BPlusTree<TKey, TVal>
         return parent;
     }
 
+    #endregion Node Manipulation
+
+    #region Search Helpers
+
+    private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)
+    {
+        try
+        {
+            switch (n)
+            {
+                case LeafNode<TKey, TVal> ln:
+                    return ln;
+                case InternalNode<TKey, TVal> inn:
+                    var i = Array.BinarySearch(inn.Keys, 0, inn.KeysInUse, key);
+                    i = i >= 0 ? i : ~i;
+                    i = Math.Clamp(i, 0, inn.KeysInUse-1);
+                    try
+                    {
+                        var n2 = GetIndirect(i, inn);
+                        return FindNodeForKey(key, n2);
+                    }
+                    catch (Exception e) when (Debugger.IsAttached)
+                    {
+                        _ = e;
+                        Debugger.Break();
+                    }
+                    return LeafNodes.FirstOrDefault();
+                default:
+                    throw new BPlusTreeException("Unknown node type");
+            }
+        }
+        catch (IndexOutOfRangeException e)
+        {
+            throw;
+        }
+    }
+
+    IEnumerable<LeafNode<TKey, TVal>> AllLeafNodes()
+    {
+        var firstLeafNode = LeafNodes.FirstOrDefault(n => n.PreviousNode == -1);
+
+        if (firstLeafNode != null)
+        {
+            var currentNode = firstLeafNode;
+
+            while (currentNode != null)
+            {
+                yield return currentNode;
+
+                if (currentNode.NextNode != -1)
+                {
+                    currentNode = Get(currentNode.NextNode) as LeafNode<TKey, TVal>;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    private Node<TKey, TVal>? Get(int id)
+    {
+        if (id < 0 || id > Nodes.Count)
+        {
+            return null;
+        }
+        return Nodes[id];
+    }
+
+    private Node<TKey, TVal> GetIndirect(int index, InternalNode<TKey, TVal> n)
+    {
+        var targetNodeId = n.P[index];
+        return Nodes[targetNodeId];
+    }
+
+    private int LastIndexSmallerThan(TKey key, Node<TKey, TVal> n)
+    {
+        int left = 0;
+        int right = n.KeysInUse - 1;
+        int result = -1;
+
+        while (left <= right)
+        {
+            int mid = left + (right - left) / 2;
+
+            if (n.Keys[mid].CompareTo(key) < 0)
+            {
+                result = mid;
+                left = mid + 1;
+            }
+            else
+            {
+                right = mid - 1;
+            }
+        }
+
+        return result;
+    }
+    private int FirstIndexGreaterThanOrEqualTo(TKey key, Node<TKey, TVal> n)
+    {
+        int left = 0;
+        int right = n.KeysInUse - 1;
+
+        while (left <= right)
+        {
+            int mid = left + (right - left) / 2;
+
+            if (n.Keys[mid].CompareTo(key) >= 0)
+            {
+                right = mid - 1;
+            }
+            else
+            {
+                left = mid + 1;
+            }
+        }
+
+        return left;
+    }
+
+    #endregion Search Helpers
+
     #region Events
 
-    public event Action<Node<TKey, TVal>,Node<TKey, TVal>> NodeSplit;
+    public event Action<Node<TKey, TVal>, Node<TKey, TVal>> NodeSplit;
 
     public event Action<Node<TKey, TVal>> NodeSplitting;
 

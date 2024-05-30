@@ -13,8 +13,8 @@ public class BPlusTreeTests
     [Fact]
     public void a_tree_with_a_large_number_of_entries_can_find_each_element()
     {
-        const int numSamples = 5000;
-        var sut = new BPlusTree<long, long>();
+        const int numSamples = 50 * Constants.MaxKeysPerNode;
+        var sut = new BPlusTree<long, long>(defaultKey: long.MinValue, defaultValue: long.MinValue);
         for (var i = 0; i < numSamples; i++)
         {
             sut.Insert(i, i * 10);
@@ -31,6 +31,23 @@ public class BPlusTreeTests
                 Assert.Fail();
             }
         }
+    }
+
+    [Fact]
+    public void a_tree_with_a_1000_entries_should_have_11_nodes()
+    {
+        const int desiredInternalNodes = 5; // i.e. 4 of 50 keys
+        const int numSamples = (desiredInternalNodes+1) * 50 * 50;
+        var sut = new BPlusTree<int, int>(defaultKey: int.MinValue, defaultValue: int.MinValue);
+        for (var i = 0; i < numSamples; i++)
+        {
+            sut.Insert(i, i);
+        }
+
+        sut.AllKeys().Should().HaveCount(numSamples).And.BeInAscendingOrder();
+        sut.AllItems().Should().HaveCount(numSamples).And.BeInAscendingOrder();
+        sut.LeafNodes.Count().Should().Be(numSamples/50 - 1);
+        sut.InternalNodes.Count().Should().Be(1);
     }
 
     [Property]
@@ -51,6 +68,28 @@ public class BPlusTreeTests
         foreach (var x in testData)
         {
             Assert.Equal(x.Value, sut[x.Key]);
+        }
+    }
+
+    [Property]
+    public void all_keys_in_leaf_nodes_are_stored_in_order(KeyValuePair<int, int>[] testData)
+    {
+        // must be unique keys
+        if (testData.Select(x => x.Key).Distinct().Count() < testData.Length)
+        {
+            return;
+        }
+
+        var sut = new BPlusTree<int, int>();
+        foreach (var x in testData)
+        {
+            sut.Insert(x.Key, x.Value);
+        }
+
+        var a = sut.AllKeys().ToArray();
+        for (int i = 0; i < a.Length-1; i++)
+        {
+            a[i].Should().BeLessThan(a[i + 1]);
         }
     }
 
@@ -92,6 +131,26 @@ public class BPlusTreeTests
         sut.Insert(k, v1);
         sut.Insert(k, v2);
         Assert.Equal(v2, sut[k]);
+    }
+
+    [Fact]
+    public void there_should_be_no_overlap_between_the_key_ranges_of_internal_nodes()
+    {
+        var sut = new BPlusTree<long, long>(defaultKey: long.MinValue, defaultValue: long.MinValue);
+        var r = new Random();
+
+        while(sut.InternalNodes.Count() < 10)
+        {
+            sut.Insert(r.Next(), r.Next());
+        }
+
+        // now check that none of the internal nodes has overlapping Key Ranges
+        var keys = sut.InternalNodes.Select(n => n.KeyRange).OrderBy(x => x.Item1).ToArray();
+        for (var i = 0; i < keys.Length - 1; i++)
+        {
+            keys[i].Item2.Should().BeLessThan(keys[i + 1].Item1);
+        }
+
     }
 
     [Property]
@@ -341,13 +400,13 @@ public class BPlusTreeTests
     public void adding_an_element_into_a_tree_with_one_partially_full_node_leaves_the_same_number_of_nodes()
     {
         var sut = new BPlusTree<long, long>();
-        for (var i = 0; i < Constants.MaxNodeSize - 3; i++)
+        for (var i = 0; i < Constants.MaxKeysPerNode - 3; i++)
         {
             sut.Insert(i, i);
         }
 
-        sut.Insert(Constants.MaxNodeSize,
-            Constants.MaxNodeSize); // any other number would do, but we know this isn't in the list
+        sut.Insert(Constants.MaxKeysPerNode,
+            Constants.MaxKeysPerNode); // any other number would do, but we know this isn't in the list
         sut.Nodes.Count.Should().Be(1);
         sut.Root.IsFull.Should().BeFalse();
         sut.InternalNodes.Count().Should().Be(0);
@@ -370,7 +429,7 @@ public class BPlusTreeTests
         {
             Debugger.Break();
         };
-        for (var i = 0; i < Constants.MaxNodeSize+1; i++)
+        for (var i = 0; i < Constants.MaxKeysPerNode+1; i++)
         {
             sut.Insert(i, i);
         }
@@ -385,7 +444,7 @@ public class BPlusTreeTests
     public void adding_maxnodes_elements_into_a_tree_should_end_with_a_single_node()
     {
         var sut = new BPlusTree<long, long>();
-        for (var i = 0; i < Constants.MaxNodeSize; i++)
+        for (var i = 0; i < Constants.MaxKeysPerNode; i++)
         {
             sut.Insert(i, i);
         }
@@ -443,7 +502,7 @@ public class BPlusTreeTests
     public void inserting_MaxNodeSize_minus_1_items_into_a_tree_leaves_a_tree_with_one_node_that_is_not_full()
     {
         var sut = new BPlusTree<long, long>();
-        for (var i = 0; i < Constants.MaxNodeSize - 1; i++)
+        for (var i = 0; i < Constants.MaxKeysPerNode - 1; i++)
         {
             sut.Insert(i, i);
         }
@@ -451,7 +510,7 @@ public class BPlusTreeTests
         // assert that there is only one full node
         sut.Nodes.Count.Should().Be(1);
         sut.Root.IsFull.Should().BeFalse(); // adding one more item to the node would trigger a split.
-        sut.Root.KeysInUse.Should().Be(Constants.MaxNodeSize - 1);
+        sut.Root.KeysInUse.Should().Be(Constants.MaxKeysPerNode - 1);
     }
 
     // removing a value from the tree reduces its count by 1

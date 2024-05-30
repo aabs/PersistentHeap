@@ -5,8 +5,8 @@ where TKey : IComparable<TKey>
 {
     public InternalNode(int id) : base(id)
     {
-        Keys = new TKey[Constants.MaxNodeSize - 1];
-        P = new int[Constants.MaxNodeSize];
+        Keys = new TKey[Constants.MaxKeysPerNode];
+        P = new int[Constants.MaxKeysPerNode+1];
     }
 
     public InternalNode(int id, TKey[] keys) : this(id)
@@ -31,7 +31,7 @@ where TKey : IComparable<TKey>
             return;
         }
 
-        if (index + 1 == Constants.MaxNodeSize)
+        if (index + 1 == Constants.MaxKeysPerNode)
         {
             // if we are here, it means that we have found the desired key, and it is the very last
             // element of a full node, so the only work required is to erase the last elements of Keys
@@ -64,8 +64,9 @@ where TKey : IComparable<TKey>
     /// <exception cref="BPlusTreeException"></exception>
     public new void Insert(TKey k, int nHiId, bool overwriteOnEquality = true)
     {
-        var indexOfKey = FindElementIndexByBinarySearch(Keys, (int)KeysInUse, k);
-        var knownKey = indexOfKey != -1;
+        var indexOfKey = Array.BinarySearch(Keys[..KeysInUse], k);
+        //var indexOfKey = FindElementIndexByBinarySearch(Keys, (int)KeysInUse, k);
+        var knownKey = indexOfKey >= 0;
         if (knownKey && !overwriteOnEquality)
         {
             throw new BPlusTreeException("Key already exists in node and overwrite is not allowed");
@@ -88,14 +89,14 @@ where TKey : IComparable<TKey>
             return;
         }
 
-        var insertionIndex = FindInsertionPointByBinarySearch(Keys, (int)KeysInUse, k);
+        var insertionIndex = FindInsertionPoint(Keys, (int)KeysInUse, k);
         if (insertionIndex+1 == Keys.Length)
         {
             OverfullNodeException.Throw("Insertion would cause overflow");
         }
 
         Array.Copy(Keys, insertionIndex, Keys, insertionIndex + 1, Keys.Length - (insertionIndex + 1));
-        Array.Copy(P, insertionIndex, P, insertionIndex + 1, P.Length - (insertionIndex + 1));
+        Array.Copy(P, insertionIndex+1, P, insertionIndex + 2, P.Length - (insertionIndex + 2));
         Keys[insertionIndex] = k;
         P[insertionIndex] = nHiId;
         KeysInUse++;
