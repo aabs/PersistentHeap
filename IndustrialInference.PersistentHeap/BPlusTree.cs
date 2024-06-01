@@ -131,7 +131,7 @@ public class BPlusTree<TKey, TVal>
 
         for (var i = 0; i < n.KeysInUse; i++)
         {
-            if (n.Keys[i].CompareTo(key) == 0)
+            if (n.K[i].CompareTo(key) == 0)
             {
                 var r = n.Items[i];
                 n.Delete(key);
@@ -205,7 +205,7 @@ public class BPlusTree<TKey, TVal>
 
     public IEnumerable<TKey> AllKeys()
     {
-        return AllLeafNodes().SelectMany(x => x.Keys[..x.KeysInUse]);
+        return AllLeafNodes().SelectMany(x => x.K[..x.KeysInUse]);
     }
     public IEnumerable<TVal> AllItems()
     {
@@ -220,7 +220,7 @@ public class BPlusTree<TKey, TVal>
         var newIndex = Nodes.Count;
         var n = new InternalNode<TKey, TVal>(newIndex, [key], [leftChild, rightChild]);
 #if WIPE_UNUSED
-        Array.Fill(n.Keys, defaultKey ?? default, 1, n.Keys.Length - 1);
+        Array.Fill(n.K, defaultKey ?? default, 1, n.K.Length - 1);
         Array.Fill(n.P, -1, 2, n.P.Length - 2);
 #endif
 
@@ -252,13 +252,14 @@ public class BPlusTree<TKey, TVal>
         var parent = (InternalNode<TKey, TVal>?)Get(nlo.ParentNode);
         // 1. create the new internal node
         // 2. transfer rhs of lo node into it
-        var midPoint = nlo.Keys.Length / 2;
-        var nhi = CreateNewInternalNode(nlo.Keys[midPoint..], nlo.P[midPoint..]);
+        var midPoint = nlo.K.Length / 2;
+        var nhi = CreateNewInternalNode(nlo.K[midPoint..], nlo.P[midPoint..]);
+        nhi.KeysInUse = nlo.KeysInUse - midPoint;
         nlo.KeysInUse = midPoint;
         nhi.ParentNode = nlo.ParentNode;
 
 #if WIPE_UNUSED
-        Array.Fill(nlo.Keys[midPoint..], defaultKey ?? default);
+        Array.Fill(nlo.K[midPoint..], defaultKey ?? default);
         Array.Fill(nlo.P[midPoint..], -1);
 #endif
 
@@ -273,7 +274,7 @@ public class BPlusTree<TKey, TVal>
         // 4. insert hi node into parent
         if (parent is null)
         {
-            parent = CreateNewInternalNode(nlo.Keys[midPoint - 1], nlo.ID, nhi.ID);
+            parent = CreateNewInternalNode(nlo.MaxKey, nlo.ID, nhi.ID);
             nlo.ParentNode = parent.ID;
             nhi.ParentNode = parent.ID;
             parent.ParentNode = -1;
@@ -285,7 +286,7 @@ public class BPlusTree<TKey, TVal>
         {
             // if the parent is not null, then we insert the new child into the parent, and let it
             // work out the rest
-            InsertIntoInternalNode(nlo.Keys[nlo.KeysInUse], parent, nhi);
+            InsertIntoInternalNode(nlo.MaxKey, parent, nhi);
         }
         OnNodeSplit(nlo, nhi);
         return parent;
@@ -298,12 +299,12 @@ public class BPlusTree<TKey, TVal>
         var idlo = n.PreviousNode;
         var idhi = n.NextNode;
 
-        var midPoint = n.Keys.Length / 2;
-        var nhi = CreateNewLeafNode(n.Keys[midPoint..], n.Items[midPoint..]);
+        var midPoint = n.K.Length / 2;
+        var nhi = CreateNewLeafNode(n.K[midPoint..], n.Items[midPoint..]);
         n.KeysInUse = midPoint;
 
 #if WIPE_UNUSED
-        Array.Fill<TKey>(n.Keys, defaultKey ?? default, midPoint, n.Keys.Length - midPoint);
+        Array.Fill<TKey>(n.K, defaultKey ?? default, midPoint, n.K.Length - midPoint);
         Array.Fill<TVal>(n.Items, defaultValue ?? default, midPoint, n.Items.Length - midPoint);
 #endif
 
@@ -313,7 +314,7 @@ public class BPlusTree<TKey, TVal>
         n.NextNode = nhi.ID;
 
         // now insert key into one of the leaf nodes
-        if (newKey.CompareTo(nhi.Keys[0]) >= 0) // if newKey > all keys in low side node
+        if (newKey.CompareTo(nhi.K[0]) >= 0) // if newKey > all keys in low side node
         {
             nhi.Insert(newKey, newItem);
         }
@@ -328,7 +329,7 @@ public class BPlusTree<TKey, TVal>
         // only if there is no parent should we create a parent here and wire it up
         if (parent is null)
         {
-            parent = CreateNewInternalNode(nhi.Keys[0], n.ID, nhi.ID);
+            parent = CreateNewInternalNode(n.MaxKey, n.ID, nhi.ID);
             n.ParentNode = parent.ID;
             nhi.ParentNode = parent.ID;
             parent.ParentNode = -1;
@@ -341,7 +342,7 @@ public class BPlusTree<TKey, TVal>
             // if the parent is not null, then we insert the new child into the parent, and let it
             // work out the rest
             nhi.ParentNode = parent.ID;
-            InsertIntoInternalNode(nhi.Keys[0], parent, nhi);
+            InsertIntoInternalNode(n.MaxKey, parent, nhi);
         }
 
         OnNodeSplit(n, nhi);
@@ -352,37 +353,28 @@ public class BPlusTree<TKey, TVal>
 
     #region Search Helpers
 
+
     private LeafNode<TKey, TVal> FindNodeForKey(TKey key, Node<TKey, TVal> n)
     {
-        try
+        // the node for a key, is the first node whose highest key is greater than the given key.  K[i] > key => P[i] is the node
+        // Reminder - P[i] is a pointer to the leaf node containing the values less than or equal to K[i].
+        // If key is greater than the last key in the node, then P[KeysInUse+1] is the node reference to use.
+
+        if (n is LeafNode<TKey, TVal> ln)
         {
-            switch (n)
-            {
-                case LeafNode<TKey, TVal> ln:
-                    return ln;
-                case InternalNode<TKey, TVal> inn:
-                    var i = Array.BinarySearch(inn.Keys, 0, inn.KeysInUse, key);
-                    i = i >= 0 ? i : ~i;
-                    i = Math.Clamp(i, 0, inn.KeysInUse-1);
-                    try
-                    {
-                        var n2 = GetIndirect(i, inn);
-                        return FindNodeForKey(key, n2);
-                    }
-                    catch (Exception e) when (Debugger.IsAttached)
-                    {
-                        _ = e;
-                        Debugger.Break();
-                    }
-                    return LeafNodes.FirstOrDefault();
-                default:
-                    throw new BPlusTreeException("Unknown node type");
-            }
+            return ln;
         }
-        catch (IndexOutOfRangeException e)
+        
+        var i = FirstIndexGreaterThanOrEqualTo(key, n);
+        /*
+        while (i < n.KeysInUse && n.K[i].CompareTo(key) < 0)
         {
-            throw;
+            i++;
         }
+        */
+        var n2 = GetIndirect(i, (InternalNode<TKey, TVal>)n);
+
+        return FindNodeForKey(key, n2);
     }
 
     IEnumerable<LeafNode<TKey, TVal>> AllLeafNodes()
@@ -421,20 +413,24 @@ public class BPlusTree<TKey, TVal>
     private Node<TKey, TVal> GetIndirect(int index, InternalNode<TKey, TVal> n)
     {
         var targetNodeId = n.P[index];
+        if (targetNodeId == -1)
+        {
+            Debugger.Break();
+        }
         return Nodes[targetNodeId];
     }
 
     private int LastIndexSmallerThan(TKey key, Node<TKey, TVal> n)
     {
-        int left = 0;
-        int right = n.KeysInUse - 1;
-        int result = -1;
+        var left = 0;
+        var right = n.KeysInUse - 1;
+        var result = -1;
 
         while (left <= right)
         {
-            int mid = left + (right - left) / 2;
+            var mid = left + (right - left) / 2;
 
-            if (n.Keys[mid].CompareTo(key) < 0)
+            if (n.K[mid].CompareTo(key) < 0)
             {
                 result = mid;
                 left = mid + 1;
@@ -449,14 +445,14 @@ public class BPlusTree<TKey, TVal>
     }
     private int FirstIndexGreaterThanOrEqualTo(TKey key, Node<TKey, TVal> n)
     {
-        int left = 0;
-        int right = n.KeysInUse - 1;
+        var left = 0;
+        var right = n.KeysInUse - 1;
 
         while (left <= right)
         {
-            int mid = left + (right - left) / 2;
+            var mid = left + ((right - left) / 2);
 
-            if (n.Keys[mid].CompareTo(key) >= 0)
+            if (n.K[mid].CompareTo(key) >= 0)
             {
                 right = mid - 1;
             }

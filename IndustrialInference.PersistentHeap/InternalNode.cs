@@ -1,17 +1,21 @@
 namespace IndustrialInference.BPlusTree;
 
+using System.Diagnostics;
+using System.Text;
+
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class InternalNode<TKey, TVal> : Node<TKey, TVal>
 where TKey : IComparable<TKey>
 {
     public InternalNode(int id) : base(id)
     {
-        Keys = new TKey[Constants.MaxKeysPerNode];
-        P = new int[Constants.MaxKeysPerNode+1];
+        K = new TKey[Constants.MaxKeysPerNode];
+        P = new int[Constants.MaxKeysPerNode + 1];
     }
 
     public InternalNode(int id, TKey[] keys) : this(id)
     {
-        Array.Copy(keys, Keys, keys.Length);
+        Array.Copy(keys, K, keys.Length);
         KeysInUse = keys.Count();
     }
 
@@ -24,7 +28,7 @@ where TKey : IComparable<TKey>
 
     public override void Delete(TKey k)
     {
-        var index = Array.IndexOf(Keys, k);
+        var index = Array.IndexOf(K, k);
 
         if (index == -1)
         {
@@ -34,9 +38,9 @@ where TKey : IComparable<TKey>
         if (index + 1 == Constants.MaxKeysPerNode)
         {
             // if we are here, it means that we have found the desired key, and it is the very last
-            // element of a full node, so the only work required is to erase the last elements of Keys
+            // element of a full node, so the only work required is to erase the last elements of K
             // and P
-            Keys[index] = default;
+            K[index] = default;
             P[index] = P[index + 1];
             P[index + 1] = default;
             KeysInUse--;
@@ -45,11 +49,11 @@ where TKey : IComparable<TKey>
 
         for (var i = index + 1; i < KeysInUse; i++)
         {
-            Keys[i - 1] = Keys[i];
+            K[i - 1] = K[i];
             P[i - 1] = P[i];
         }
 
-        Keys[KeysInUse - 1] = default;
+        K[KeysInUse - 1] = default;
         P[KeysInUse - 1] = P[KeysInUse];
         P[KeysInUse] = default;
         KeysInUse--;
@@ -64,21 +68,20 @@ where TKey : IComparable<TKey>
     /// <exception cref="BPlusTreeException"></exception>
     public new void Insert(TKey k, int nHiId, bool overwriteOnEquality = true)
     {
-        var indexOfKey = Array.BinarySearch(Keys[..KeysInUse], k);
-        //var indexOfKey = FindElementIndexByBinarySearch(Keys, (int)KeysInUse, k);
+        var indexOfKey = Array.BinarySearch(K, 0, KeysInUse, k);
         var knownKey = indexOfKey >= 0;
         if (knownKey && !overwriteOnEquality)
         {
             throw new BPlusTreeException("Key already exists in node and overwrite is not allowed");
         }
-        if (!knownKey && KeysInUse+1 == Keys.Length)
+        if (!knownKey && KeysInUse + 1 == K.Length)
         {
             OverfullNodeException.Throw("InternalNode is full");
         }
 
         if (KeysInUse == 0)
         {
-            Keys[0] = k;
+            K[0] = k;
             P[0] = nHiId;
             KeysInUse++;
             return;
@@ -89,16 +92,26 @@ where TKey : IComparable<TKey>
             return;
         }
 
-        var insertionIndex = FindInsertionPoint(Keys, (int)KeysInUse, k);
-        if (insertionIndex+1 == Keys.Length)
+        var insertionIndex = FindInsertionPoint(K, (int)KeysInUse, k);
+        if (insertionIndex + 1 == K.Length)
         {
             OverfullNodeException.Throw("Insertion would cause overflow");
         }
 
-        Array.Copy(Keys, insertionIndex, Keys, insertionIndex + 1, Keys.Length - (insertionIndex + 1));
+        Array.Copy(K, insertionIndex, K, insertionIndex + 1, K.Length - (insertionIndex + 1));
         Array.Copy(P, insertionIndex+1, P, insertionIndex + 2, P.Length - (insertionIndex + 2));
-        Keys[insertionIndex] = k;
-        P[insertionIndex] = nHiId;
+        K[insertionIndex] = k;
+        P[insertionIndex+1] = nHiId;
         KeysInUse++;
+    }
+    protected override string DebuggerDisplay()
+    {
+        var sb = new StringBuilder();
+        sb.AppendFormat("({0}) ", ID);
+        sb.Append("K");
+        RenderArray(sb, K, KeysInUse);
+        sb.Append("; P");
+        RenderArray(sb, P, KeysInUse+1);
+        return sb.ToString();
     }
 }

@@ -1,5 +1,9 @@
 namespace IndustrialInference.BPlusTree;
 
+using System.Diagnostics;
+using System.Text;
+
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public abstract class Node<TKey, TVal>
     where TKey : IComparable<TKey>
 {
@@ -17,7 +21,7 @@ public abstract class Node<TKey, TVal>
 
     public bool IsEmpty => KeysInUse == 0;
     public bool IsFull => KeysInUse == Constants.MaxKeysPerNode;
-    public TKey[] Keys { get; set; }
+    public TKey[] K { get; set; }
     public int KeysInUse { get => _keysInUse; set => _keysInUse = value; }
 
     public abstract void Delete(TKey k);
@@ -27,14 +31,16 @@ public abstract class Node<TKey, TVal>
 
     #region Searching
 
-    public (TKey, TKey) KeyRange => (Keys[0], Keys[KeysInUse - 1]);
+    public (TKey, TKey) KeyRange => (K[0], K[KeysInUse - 1]);
+    public TKey MinKey => K[0];
+    public TKey MaxKey => K[KeysInUse - 1];
 
-    public bool ContainsKey(TKey key) => Array.BinarySearch(Keys[..KeysInUse], key) >= 0;
+    public bool ContainsKey(TKey key) => Array.BinarySearch(K, 0, KeysInUse, key) >= 0;
 
     protected int FindInsertionPoint<T>(T[] array, int valuesInUse, T value)
         where T : IComparable<T>
     {
-        var idx = Array.BinarySearch(array[..valuesInUse], value);
+        var idx = Array.BinarySearch(array, 0, valuesInUse, value);
         return idx >= 0 ? idx : ~idx;
     }
 
@@ -47,4 +53,33 @@ public abstract class Node<TKey, TVal>
     public int PreviousNode { get; set; } = -1;
 
     #endregion Linkage
+
+    protected virtual string DebuggerDisplay()
+    {
+        var sb = new StringBuilder();
+        sb.AppendFormat("({0}) ", ID);
+        RenderArray(sb, K, KeysInUse);
+        return sb.ToString();
+    }
+
+    protected void RenderArray<T>(StringBuilder sb, T[] xs, int num)
+    {
+        sb.Append("[ ");
+        var sep = "";
+
+        foreach (var item in xs[..num])
+        {
+            sb.Append(sep);
+            sb.Append(item);
+            sep = " | ";
+        }
+        
+        foreach (var item in xs[num..])
+        {
+            sb.Append(sep);
+            sb.Append('/');
+        }
+
+        sb.Append(" ]");
+    }
 }

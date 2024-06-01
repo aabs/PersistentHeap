@@ -138,17 +138,19 @@ public class BPlusTreeTests
     {
         var sut = new BPlusTree<long, long>(defaultKey: long.MinValue, defaultValue: long.MinValue);
         var r = new Random();
-
+        var ctr = 0L;
         while(sut.InternalNodes.Count() < 10)
         {
-            sut.Insert(r.Next(), r.Next());
+            sut.Insert(ctr, ctr);
+            ctr++;
         }
 
         // now check that none of the internal nodes has overlapping Key Ranges
         var keys = sut.InternalNodes.Select(n => n.KeyRange).OrderBy(x => x.Item1).ToArray();
         for (var i = 0; i < keys.Length - 1; i++)
         {
-            keys[i].Item2.Should().BeLessThan(keys[i + 1].Item1);
+            var isLess = keys[i].Item2 < keys[i + 1].Item1;
+            isLess.Should().BeTrue();
         }
 
     }
@@ -164,7 +166,7 @@ public class BPlusTreeTests
     {
         for (int i = 1; i < n.KeysInUse; i++)
         {
-            if (n.Keys[i] < n.Keys[i - 1])
+            if (n.K[i] < n.K[i - 1])
             {
                 return false;
             }
@@ -217,7 +219,17 @@ public class BPlusTreeTests
         };
         for (var i = 0; i < numSamples; i++)
         {
+            try
+            {
             sut.Insert(i, i * 10);
+
+            }
+            catch (ArgumentOutOfRangeException e) when (Debugger.IsAttached)
+            {
+                _ = e;
+                Debugger.Break();
+            }
+
         }
 
     }
@@ -290,6 +302,23 @@ public class BPlusTreeTests
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree_case_1()
     {
         int[] xs = [0];
+        var sut = new BPlusTree<long, long>();
+        foreach (var x in xs)
+        {
+            sut.Insert(x, x);
+        }
+
+        var valToFind = xs[0];
+        sut.ContainsKey(valToFind).Should().BeTrue();
+        var w = sut.Delete(valToFind);
+        sut.ContainsKey(valToFind).Should().BeFalse();
+    }
+
+    [Fact]
+    public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree__case_2()
+    {
+        int[] xs = [-2,-1,1,0];
+
         var sut = new BPlusTree<long, long>();
         foreach (var x in xs)
         {

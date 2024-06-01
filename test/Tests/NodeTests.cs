@@ -47,7 +47,7 @@ public class LeafNodePropertyTests
         }
 
         var expected = xs.Distinct().OrderBy(x => x).Select(i => (long)i).ToArray();
-        var actual = sut.Keys[..(int)sut.Count];
+        var actual = sut.K[..(int)sut.Count];
         expected.Should().BeEquivalentTo(actual);
     }
 
@@ -81,7 +81,7 @@ public class LeafNodePropertyTests
         }
         sut.Delete(xs[0]);
 
-        var a = sut.Keys[..(int)sut.Count];
+        var a = sut.K[..(int)sut.Count];
         var b = a.OrderBy(x => x);
         for (int i = 0; i < (int)sut.Count; i++)
         {
