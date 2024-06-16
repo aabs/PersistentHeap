@@ -9,18 +9,20 @@ public abstract class Node<TKey, TVal>
 {
 #pragma warning disable IDE1006 // Naming Styles
     protected int _keysInUse;
+    protected readonly int degree;
 #pragma warning restore IDE1006 // Naming Styles
 
-    public Node(int id)
+    public Node(int id, int degree)
     {
         ID = id;
+        this.degree = degree;
     }
 
     public int Count => KeysInUse;
     public int ID { get; init; }
 
     public bool IsEmpty => KeysInUse == 0;
-    public bool IsFull => KeysInUse == Constants.MaxKeysPerNode;
+    public bool IsFull => KeysInUse == degree;
     public TKey[] K { get; set; }
     public int KeysInUse { get => _keysInUse; set => _keysInUse = value; }
 

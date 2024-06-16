@@ -6,13 +6,13 @@ using System.Diagnostics;
 public class LeafNode<TKey, TVal> : Node<TKey, TVal>
     where TKey : IComparable<TKey>
 {
-    public LeafNode(int id) : base(id)
+    public LeafNode(int id, int degree) : base(id, degree)
     {
-        K = new TKey[Constants.MaxKeysPerNode];
-        Items = new TVal[Constants.MaxKeysPerNode];
+        K = new TKey[degree-1];
+        Items = new TVal[degree-1];
     }
 
-    public LeafNode(int id, TKey[] keys, TVal[] items) : this(id)
+    public LeafNode(int id, int degree, TKey[] keys, TVal[] items) : this(id, degree)
     {
         Array.Copy(keys, K, keys.Length);
         Array.Copy(items, Items, items.Length);

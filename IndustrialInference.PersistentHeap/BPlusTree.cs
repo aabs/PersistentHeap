@@ -32,6 +32,7 @@ using System.Net;
 public class BPlusTree<TKey, TVal>
     where TKey : IComparable<TKey>
 {
+    private readonly int degree;
     private readonly TKey? defaultKey;
     private readonly TVal? defaultValue;
     #region Public interface
@@ -39,15 +40,16 @@ public class BPlusTree<TKey, TVal>
     /// <summary>
     ///   Initializes a new instance of the <see cref="BPlusTree{TKey, TVal}" /> class.
     /// </summary>
-    public BPlusTree(TKey? defaultKey = default, TVal? defaultValue = default)
+    public BPlusTree(int degree = Constants.MaxKeysPerNode, TKey? defaultKey = default, TVal? defaultValue = default)
     {
-        Nodes = [new LeafNode<TKey, TVal>(0)];
+        Nodes = [new LeafNode<TKey, TVal>(0, degree)];
+        this.degree = degree;
         this.defaultKey = defaultKey;
         this.defaultValue = defaultValue;
     }
 
-    public IEnumerable<InternalNode<TKey, TVal>> InternalNodes
-            => Nodes.Where(n => n is InternalNode<TKey, TVal>).Cast<InternalNode<TKey, TVal>>();
+    public IEnumerable<InternalNodeOld<TKey, TVal>> InternalNodes
+            => Nodes.Where(n => n is InternalNodeOld<TKey, TVal>).Cast<InternalNodeOld<TKey, TVal>>();
 
     public IEnumerable<LeafNode<TKey, TVal>> LeafNodes
             => Nodes.Where(n => n is LeafNode<TKey, TVal>).Cast<LeafNode<TKey, TVal>>();
@@ -155,15 +157,15 @@ public class BPlusTree<TKey, TVal>
     public void Insert(TKey key, TVal value)
             => Insert(key, value, RootIndexNode);
 
-    public void InsertIntoInternalNode(TKey key, InternalNode<TKey, TVal> nodeToInsertInto, Node<TKey, TVal> nodeToInsert)
+    public void InsertIntoInternalNode(TKey key, InternalNodeOld<TKey, TVal> nodeToInsertInto, Node<TKey, TVal> nlo, Node<TKey, TVal> nhi)
     {
         try
         {
-            nodeToInsertInto.Insert(key, nodeToInsert.ID);
+            nodeToInsertInto.Insert(key, nlo.ID, nhi.ID);
         }
         catch (OverfullNodeException)
         {
-            SplitInternalNode(nodeToInsertInto, key, nodeToInsert.ID);
+            SplitInternalNode(nodeToInsertInto, key, nlo.ID, nhi.ID);
         }
     }
 
@@ -215,10 +217,10 @@ public class BPlusTree<TKey, TVal>
 
     #region Node Manipulation
 
-    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey key, int leftChild, int rightChild)
+    private InternalNodeOld<TKey, TVal> CreateNewInternalNode(TKey key, int leftChild, int rightChild)
     {
         var newIndex = Nodes.Count;
-        var n = new InternalNode<TKey, TVal>(newIndex, [key], [leftChild, rightChild]);
+        var n = new InternalNodeOld<TKey, TVal>(newIndex, degree, [key], [leftChild, rightChild]);
 #if WIPE_UNUSED
         Array.Fill(n.K, defaultKey ?? default, 1, n.K.Length - 1);
         Array.Fill(n.P, -1, 2, n.P.Length - 2);
@@ -229,10 +231,10 @@ public class BPlusTree<TKey, TVal>
         return n;
     }
 
-    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey[] keys, int[] children)
+    private InternalNodeOld<TKey, TVal> CreateNewInternalNode(TKey[] keys, int[] children)
     {
         var newIndex = Nodes.Count;
-        var n = new InternalNode<TKey, TVal>(newIndex, keys, children);
+        var n = new InternalNodeOld<TKey, TVal>(newIndex, degree, keys, children);
         Nodes.Add(n);
         return n;
     }
@@ -240,16 +242,16 @@ public class BPlusTree<TKey, TVal>
     private LeafNode<TKey, TVal> CreateNewLeafNode(TKey[] keys, TVal[] items)
     {
         var newIndex = Nodes.Count;
-        var n = new LeafNode<TKey, TVal>(newIndex, keys, items);
+        var n = new LeafNode<TKey, TVal>(newIndex, degree, keys, items);
         Nodes.Add(n);
 
         return n;
     }
 
-    private InternalNode<TKey, TVal> SplitInternalNode(InternalNode<TKey, TVal> nlo, TKey newKey, int newRef)
+    private InternalNodeOld<TKey, TVal> SplitInternalNode(InternalNodeOld<TKey, TVal> nlo, TKey newKey, int loId, int hiId)
     {
         OnNodeSplitting(nlo);
-        var parent = (InternalNode<TKey, TVal>?)Get(nlo.ParentNode);
+        var parent = (InternalNodeOld<TKey, TVal>?)Get(nlo.ParentNode);
         // 1. create the new internal node
         // 2. transfer rhs of lo node into it
         var midPoint = nlo.K.Length / 2;
@@ -286,20 +288,20 @@ public class BPlusTree<TKey, TVal>
         {
             // if the parent is not null, then we insert the new child into the parent, and let it
             // work out the rest
-            InsertIntoInternalNode(nlo.MaxKey, parent, nhi);
+            InsertIntoInternalNode(nlo.MaxKey, parent, nlo, nhi);
         }
         OnNodeSplit(nlo, nhi);
         return parent;
     }
 
-    private InternalNode<TKey, TVal> SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
+    private InternalNodeOld<TKey, TVal> SplitLeafNode(LeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
     {
         OnNodeSplitting(n);
-        var parent = (InternalNode<TKey, TVal>?)Get(n.ParentNode);
+        var parent = (InternalNodeOld<TKey, TVal>?)Get(n.ParentNode);
         var idlo = n.PreviousNode;
         var idhi = n.NextNode;
 
-        var midPoint = n.K.Length / 2;
+        var midPoint = degree / 2;
         var nhi = CreateNewLeafNode(n.K[midPoint..], n.Items[midPoint..]);
         n.KeysInUse = midPoint;
 
@@ -342,7 +344,7 @@ public class BPlusTree<TKey, TVal>
             // if the parent is not null, then we insert the new child into the parent, and let it
             // work out the rest
             nhi.ParentNode = parent.ID;
-            InsertIntoInternalNode(n.MaxKey, parent, nhi);
+            InsertIntoInternalNode(n.MaxKey, parent, n, nhi);
         }
 
         OnNodeSplit(n, nhi);
@@ -364,7 +366,7 @@ public class BPlusTree<TKey, TVal>
         {
             return ln;
         }
-        
+
         var i = FirstIndexGreaterThanOrEqualTo(key, n);
         /*
         while (i < n.KeysInUse && n.K[i].CompareTo(key) < 0)
@@ -372,7 +374,7 @@ public class BPlusTree<TKey, TVal>
             i++;
         }
         */
-        var n2 = GetIndirect(i, (InternalNode<TKey, TVal>)n);
+        var n2 = GetIndirect(i, (InternalNodeOld<TKey, TVal>)n);
 
         return FindNodeForKey(key, n2);
     }
@@ -410,7 +412,7 @@ public class BPlusTree<TKey, TVal>
         return Nodes[id];
     }
 
-    private Node<TKey, TVal> GetIndirect(int index, InternalNode<TKey, TVal> n)
+    private Node<TKey, TVal> GetIndirect(int index, InternalNodeOld<TKey, TVal> n)
     {
         var targetNodeId = n.P[index];
         if (targetNodeId == -1)
