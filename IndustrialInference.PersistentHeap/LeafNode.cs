@@ -9,17 +9,17 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
     public LeafNode(int id, int degree) : base(id, degree)
     {
         K = new TKey[degree-1];
-        Items = new TVal[degree-1];
+        V = new TVal[degree-1];
     }
 
     public LeafNode(int id, int degree, TKey[] keys, TVal[] items) : this(id, degree)
     {
         Array.Copy(keys, K, keys.Length);
-        Array.Copy(items, Items, items.Length);
+        Array.Copy(items, V, items.Length);
         KeysInUse = keys.Count();
     }
 
-    public TVal[] Items { get; set; }
+    public TVal[] V { get; set; }
 
     public TVal? this[TKey key]
     {
@@ -30,7 +30,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
             {
                 throw new KeyNotFoundException();
             }
-            return Items[index];
+            return V[index];
         }
     }
 
@@ -43,22 +43,22 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
             return;
         }
 
-        if (index == Items.Length - 1)
+        if (index == V.Length - 1)
         {
             // if we are here, it means that we have found the desired key, and it is the very last
             // element of a full node, so the only work required is to erase the last elements of
             // K and P
             K[index] = default;
-            Items[index] = default;
+            V[index] = default;
             KeysInUse--;
             return;
         }
 
         Array.Copy(K, index + 1, K, index, K.Length - (index+1));
-        Array.Copy(Items, index + 1, Items, index, Items.Length - (index+1));
+        Array.Copy(V, index + 1, V, index, V.Length - (index+1));
 
         K[KeysInUse - 1] = default;
-        Items[KeysInUse - 1] = default;
+        V[KeysInUse - 1] = default;
         KeysInUse--;
     }
 
@@ -82,7 +82,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
         if (KeysInUse == 0)
         {
             K[0] = k;
-            Items[0] = r;
+            V[0] = r;
             KeysInUse++;
             return;
         }
@@ -90,7 +90,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
         if (knownKey)
         {
             // it's know, but we are allowed to overwrite. So do so and return.
-            Items[indexOfKey] = r;
+            V[indexOfKey] = r;
             return;
         }
 
@@ -106,11 +106,11 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
 
         // being a leaf node, the keys and values 'line up', so their shifting treatment is the same
         Array.Copy(K, insertionIndex, K, insertionIndex + 1, KeysInUse - insertionIndex);
-        Array.Copy(Items, insertionIndex, Items, insertionIndex + 1, KeysInUse - insertionIndex);
+        Array.Copy(V, insertionIndex, V, insertionIndex + 1, KeysInUse - insertionIndex);
 
         // we've made space. So lets insert the value where it belongs and inc the size accordingly
         K[insertionIndex] = k;
-        Items[insertionIndex] = r;
+        V[insertionIndex] = r;
         KeysInUse++;
     }
 }

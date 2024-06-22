@@ -135,7 +135,7 @@ public class BPlusTree<TKey, TVal>
         {
             if (n.K[i].CompareTo(key) == 0)
             {
-                var r = n.Items[i];
+                var r = n.V[i];
                 n.Delete(key);
 
                 return (key, r);
@@ -211,7 +211,7 @@ public class BPlusTree<TKey, TVal>
     }
     public IEnumerable<TVal> AllItems()
     {
-        return AllLeafNodes().SelectMany(x => x.Items[..x.KeysInUse]);
+        return AllLeafNodes().SelectMany(x => x.V[..x.KeysInUse]);
     }
     #endregion Public interface
 
@@ -302,7 +302,7 @@ public class BPlusTree<TKey, TVal>
         var idhi = n.NextNode;
 
         var midPoint = degree / 2;
-        var nhi = CreateNewLeafNode(n.K[midPoint..], n.Items[midPoint..]);
+        var nhi = CreateNewLeafNode(n.K[midPoint..], n.V[midPoint..]);
         n.KeysInUse = midPoint;
 
 #if WIPE_UNUSED
