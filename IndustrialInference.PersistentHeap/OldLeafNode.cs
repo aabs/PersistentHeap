@@ -3,16 +3,16 @@ namespace IndustrialInference.BPlusTree;
 using System.Diagnostics;
 
 [DebuggerDisplay("L{DebuggerDisplay(),nq}")]
-public class LeafNode<TKey, TVal> : Node<TKey, TVal>
+public class OldLeafNode<TKey, TVal> : OldNode<TKey, TVal>
     where TKey : IComparable<TKey>
 {
-    public LeafNode(int id, int degree) : base(id, degree)
+    public OldLeafNode(int id, int degree) : base(id, degree)
     {
-        K = new TKey[degree-1];
-        V = new TVal[degree-1];
+        K = new TKey[degree - 1];
+        V = new TVal[degree - 1];
     }
 
-    public LeafNode(int id, int degree, TKey[] keys, TVal[] items) : this(id, degree)
+    public OldLeafNode(int id, int degree, TKey[] keys, TVal[] items) : this(id, degree)
     {
         Array.Copy(keys, K, keys.Length);
         Array.Copy(items, V, items.Length);
@@ -54,8 +54,8 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
             return;
         }
 
-        Array.Copy(K, index + 1, K, index, K.Length - (index+1));
-        Array.Copy(V, index + 1, V, index, V.Length - (index+1));
+        Array.Copy(K, index + 1, K, index, K.Length - (index + 1));
+        Array.Copy(V, index + 1, V, index, V.Length - (index + 1));
 
         K[KeysInUse - 1] = default;
         V[KeysInUse - 1] = default;
@@ -74,7 +74,7 @@ public class LeafNode<TKey, TVal> : Node<TKey, TVal>
 
         if (!knownKey && KeysInUse == K.Length)
         {
-            OverfullNodeException.Throw("LeafNode is full");
+            OverfullNodeException.Throw("OldLeafNode is full");
         }
 
         // if we get here, then there is space for the new value

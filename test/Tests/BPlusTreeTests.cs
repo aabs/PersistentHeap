@@ -13,17 +13,20 @@ public class BPlusTreeTests
     [Fact]
     public void a_tree_with_a_1000_entries_should_have_11_nodes()
     {
-        const int desiredInternalNodes = 5; // i.e. 4 of 50 keys
-        const int numSamples = (desiredInternalNodes + 1) * 50 * 50;
-        var sut = new BPlusTree<int, int>(defaultKey: int.MinValue, defaultValue: int.MinValue);
+        const int degree = 4;
+        const int desiredInternalNodes = degree + 1; // two levels of internal nodes
+        const int numSamples = (desiredInternalNodes) * degree * degree;
+        var sut = new BPlusTree<int, int>();
+
         for (var i = 0; i < numSamples; i++)
         {
             sut.Insert(i, i);
         }
 
-        sut.AllKeys().Should().HaveCount(numSamples).And.BeInAscendingOrder();
+        var allKeys = sut.AllKeys();
+        allKeys.Should().HaveCount(numSamples).And.BeInAscendingOrder();
         sut.AllItems().Should().HaveCount(numSamples).And.BeInAscendingOrder();
-        sut.LeafNodes.Count().Should().Be(numSamples / 50 - 1);
+        sut.LeafNodes.Count().Should().Be((numSamples / 50) - 1);
         sut.InternalNodes.Count().Should().Be(1);
     }
 
@@ -31,7 +34,7 @@ public class BPlusTreeTests
     public void a_tree_with_a_large_number_of_entries_can_find_each_element()
     {
         const int numSamples = 50 * Constants.MaxKeysPerNode;
-        var sut = new BPlusTree<long, long>(defaultKey: long.MinValue, defaultValue: long.MinValue);
+        var sut = new BPlusTree<long, long>();
         for (var i = 0; i < numSamples; i++)
         {
             sut.Insert(i, i * 10);
@@ -112,7 +115,7 @@ public class BPlusTreeTests
         }
 
         var a = sut.AllKeys().ToArray();
-        for (int i = 0; i < a.Length - 1; i++)
+        for (var i = 0; i < a.Length - 1; i++)
         {
             a[i].Should().BeLessThan(a[i + 1]);
         }
@@ -149,14 +152,16 @@ public class BPlusTreeTests
             sut.Insert(x, x * 7);
         }
 
-        sut.Root.K.Should().BeEquivalentTo(new int[] { 7, 10, 15, 0, 0 });
-        sut.Root.As<InternalNodeOld<int, int>>().P.Should().BeEquivalentTo(new int[] { 0, 4, 1, 3, 0, 0 });
+        sut.Root.K.Should().BeEquivalentTo(new[] { 7, 10, 15, 0, 0 });
+        sut.Root.As<InternalNode<int, int>>().P.Should().BeEquivalentTo(new[] { 0, 4, 1, 3, 0, 0 });
     }
-    private bool IsOrdered(Node<int, int> n)
+
+    private bool IsOrdered(NewNode<int, int> n) => ArrayIsInOrder(n.K.Arr);
+    private bool ArrayIsInOrder(int[] a)
     {
-        for (int i = 1; i < n.KeysInUse; i++)
+        for (var i = 1; i < a.Length; i++)
         {
-            if (n.K[i] < n.K[i - 1])
+            if (a[i] < a[i - 1])
             {
                 return false;
             }
@@ -172,16 +177,14 @@ public class BPlusTreeTests
     {
         const int numSamples = 5000;
         var sut = new BPlusTree<int, int>();
-        sut.NodeSplit += (nlo, nhi) =>
+        sut.NodeSplit += (nlo, _) =>
         {
-            if (nlo is InternalNodeOld<int, int> nloi)
+            if (nlo is InternalNode<int, int> nloi)
             {
                 var isOrdered = IsOrdered(nloi);
-                foreach (int k in nloi.P[..(nloi.KeysInUse + 1)])
+                foreach (var k in nloi.P.Arr[..(nloi.Count + 1)])
                 {
-                    var child = sut.Nodes[k];
-                    isOrdered = IsOrdered(child);
-                    isOrdered.Should().BeTrue();
+                    IsOrdered(k).Should().BeTrue();
                 }
             }
         };
@@ -197,14 +200,14 @@ public class BPlusTreeTests
     {
         const int numSamples = 5000;
         var sut = new BPlusTree<int, int>();
-        sut.NodeSplit += (nlo, nhi) =>
+        sut.NodeSplit += (nlo, _) =>
         {
             // just test the case where a leaf was split
-            if (nlo is InternalNodeOld<int, int> intn && intn.KeysInUse == 2)
+            if (nlo is InternalNode<int, int> intn && intn.Count == 2)
             {
                 var isOrdered = IsOrdered(intn);
-                IsOrdered(sut.Nodes[intn.P[0]]).Should().BeTrue();
-                IsOrdered(sut.Nodes[intn.P[1]]).Should().BeTrue();
+                IsOrdered(intn.P.Arr[0]).Should().BeTrue();
+                IsOrdered(intn.P.Arr[1]).Should().BeTrue();
             }
         };
         for (var i = 0; i < numSamples; i++)
@@ -231,14 +234,12 @@ public class BPlusTreeTests
         var sut = new BPlusTree<int, int>();
         sut.NodeSplitting += (n) =>
         {
-            if (n is InternalNodeOld<int, int> intn)
+            if (n is InternalNode<int, int> internalNode)
             {
-                var isOrdered = IsOrdered(intn);
-                foreach (int k in intn.P[..(intn.KeysInUse + 1)])
+                var isOrdered = IsOrdered(internalNode);
+                foreach (var k in internalNode.P.Arr[..(internalNode.Count + 1)])
                 {
-                    var child = sut.Nodes[k];
-                    isOrdered = IsOrdered(child);
-                    isOrdered.Should().BeTrue();
+                    IsOrdered(k).Should().BeTrue();
                 }
             }
         };
@@ -255,9 +256,9 @@ public class BPlusTreeTests
         var sut = new BPlusTree<int, int>();
         sut.NodeSplitting += (n) =>
         {
-            if (n is LeafNode<int, int> ln)
+            if (n is NewLeafNode<int, int> ln)
             {
-                var isOrdered = IsOrdered(ln);
+                IsOrdered(ln).Should().BeTrue();
             }
         };
         for (var i = 0; i < numSamples; i++)
@@ -284,7 +285,7 @@ public class BPlusTreeTests
 
         var valToFind = xs[0];
         sut.ContainsKey(valToFind).Should().BeTrue();
-        var w = sut.Delete(valToFind);
+        sut.Delete(valToFind);
         sut.ContainsKey(valToFind).Should().BeFalse();
     }
 
@@ -301,7 +302,7 @@ public class BPlusTreeTests
 
         var valToFind = xs[0];
         sut.ContainsKey(valToFind).Should().BeTrue();
-        var w = sut.Delete(valToFind);
+        sut.Delete(valToFind);
         sut.ContainsKey(valToFind).Should().BeFalse();
     }
 
@@ -317,16 +318,16 @@ public class BPlusTreeTests
 
         var valToFind = xs[0];
         sut.ContainsKey(valToFind).Should().BeTrue();
-        var w = sut.Delete(valToFind);
+        sut.Delete(valToFind);
         sut.ContainsKey(valToFind).Should().BeFalse();
     }
     [Fact]
-    public void a_new_tree_has_zero_child_nodes()
+    public void a_new_tree_starts_with_a_root_node()
     {
         // a new tree has zero child nodes
         var sut = new BPlusTree<long, long>();
         sut.Nodes.Count.Should().Be(1);
-        sut.RootIndexNode.Should().Be(0);
+        sut.Root.Should().NotBeNull();
     }
 
     [Fact]
@@ -336,7 +337,7 @@ public class BPlusTreeTests
         sut.Should().NotBeNull();
         sut.Nodes.Count.Should().Be(1);
         sut.Nodes.ElementAt(0).Should().BeSameAs(sut.Root);
-        sut.RootIndexNode.Should().Be(0);
+        sut.Root.Should().NotBeNull();
     }
 
     [Property]
@@ -527,7 +528,7 @@ public class BPlusTreeTests
         // assert that there is only one full node
         sut.Nodes.Count.Should().Be(1);
         sut.Root.IsFull.Should().BeFalse(); // adding one more item to the node would trigger a split.
-        sut.Root.KeysInUse.Should().Be(Constants.MaxKeysPerNode - 1);
+        sut.Root.Count.Should().Be(Constants.MaxKeysPerNode - 1);
     }
 
     // removing a value from the tree reduces its count by 1
@@ -550,7 +551,7 @@ public class BPlusTreeTests
         var valToRemove = xs[0];
         var w = sut.Delete(valToRemove);
         w.Should().NotBeNull();
-        w.Value.Item1.Should().Be(valToRemove);
+        w!.Value.Item1.Should().Be(valToRemove);
         sut.Count().Should().Be(countBefore - 1);
     }
 
@@ -569,7 +570,7 @@ public class BPlusTreeTests
         var valToRemove = xs[0];
         var w = sut.Delete(valToRemove);
         w.Should().NotBeNull();
-        w.Value.Item1.Should().Be(valToRemove);
+        w!.Value.Item1.Should().Be(valToRemove);
         sut.Count().Should().Be(countBefore - 1);
     }
 
@@ -588,7 +589,7 @@ public class BPlusTreeTests
         var valToRemove = xs[0];
         var w = sut.Delete(valToRemove);
         w.Should().NotBeNull();
-        w.Value.Item1.Should().Be(valToRemove);
+        w!.Value.Item1.Should().Be(valToRemove);
         sut.Count().Should().Be(countBefore - 1);
     }
 
@@ -607,7 +608,7 @@ public class BPlusTreeTests
         var valToRemove = xs[0];
         var w = sut.Delete(valToRemove);
         w.Should().NotBeNull();
-        w.Value.Item1.Should().Be(valToRemove);
+        w!.Value.Item1.Should().Be(valToRemove);
         sut.Count().Should().Be(countBefore - 1);
     }
 
@@ -654,16 +655,14 @@ public class BPlusTreeTests
     [Fact]
     public void there_should_be_no_overlap_between_the_key_ranges_of_internal_nodes()
     {
-        var sut = new BPlusTree<int, int>(defaultKey: int.MinValue, defaultValue: int.MinValue);
-        var r = new Random();
-        var ctr = sut.Nodes.Count(n => n is InternalNodeOld<int, int>);
+        var sut = new BPlusTree<int, int>();
         var keyCtr = 0;
 
         var splitCounter = 0;
         sut.NodeSplitting += (n) =>
         {
             splitCounter++;
-            if (n is InternalNodeOld<int, int> intn)
+            if (n is InternalNode<int, int>)
             {
                 Debugger.Break();
             }
@@ -673,9 +672,9 @@ public class BPlusTreeTests
             var x = keyCtr++;
             sut.Insert(x, x);
         }
-        System.Diagnostics.Debug.WriteLine(new BPlusTreeRenderer<int, int>().Render(sut));
+        Debug.WriteLine(new BPlusTreeRenderer<int, int>().Render(sut));
         // now check that none of the internal nodes has overlapping Key Ranges
-        var keys = sut.InternalNodes.Select(n => n.KeyRange).OrderBy(x => x.Item1).ToArray();
+        var keys = sut.InternalNodes.Select(n => (n.K.Arr[0], n.K.Arr[n.K.Count-1])).OrderBy(x => x.Item1).ToArray();
         for (var i = 0; i < keys.Length - 1; i++)
         {
             var isLess = keys[i].Item2 < keys[i + 1].Item1;

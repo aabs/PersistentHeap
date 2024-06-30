@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
-public class InternalNodeOld<TKey, TVal> : Node<TKey, TVal>
+public class InternalNodeOld<TKey, TVal> : OldNode<TKey, TVal>
 where TKey : IComparable<TKey>
 {
     public InternalNodeOld(int id, int degree) : base(id, degree)

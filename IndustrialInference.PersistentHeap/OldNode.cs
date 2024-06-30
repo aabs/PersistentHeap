@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
-public abstract class Node<TKey, TVal>
+public abstract class OldNode<TKey, TVal>
     where TKey : IComparable<TKey>
 {
 #pragma warning disable IDE1006 // Naming Styles
@@ -12,7 +12,7 @@ public abstract class Node<TKey, TVal>
     protected readonly int degree;
 #pragma warning restore IDE1006 // Naming Styles
 
-    public Node(int id, int degree)
+    public OldNode(int id, int degree)
     {
         ID = id;
         this.degree = degree;

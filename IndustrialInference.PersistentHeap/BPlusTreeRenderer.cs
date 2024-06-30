@@ -1,4 +1,4 @@
-﻿namespace IndustrialInference.BPlusTree;
+namespace IndustrialInference.BPlusTree;
 using System.Text;
 
 public class BPlusTreeRenderer<TKey, TVal>
@@ -11,13 +11,13 @@ public class BPlusTreeRenderer<TKey, TVal>
         return Render(t.Root, 0);
     }
 
-    public string Render(Node<TKey, TVal> n, int indent)
+    public string Render(NewNode<TKey, TVal> n, int indent)
     {
-        if (n is LeafNode<TKey, TVal> leafNode)
+        if (n is NewLeafNode<TKey, TVal> leafNode)
         {
             return RenderLeaf(leafNode, indent);
         }
-        else if (n is InternalNodeOld<TKey, TVal> internalNode)
+        else if (n is InternalNode<TKey, TVal> internalNode)
         {
             return RenderInternal(internalNode, indent);
         }
@@ -26,49 +26,46 @@ public class BPlusTreeRenderer<TKey, TVal>
             throw new ArgumentException("Invalid node type");
         }
     }
-    public string RenderLeaf(LeafNode<TKey, TVal> n, int indent)
+    public string RenderLeaf(NewLeafNode<TKey, TVal> n, int indent)
     {
         var sb = new StringBuilder();
         sb.Append(new string(' ', 2*indent));
-        sb.AppendFormat("({0}) ", n.ID);
-        sb.AppendLine(Render(n.K, n.KeysInUse));
+        sb.Append('L');
+        sb.AppendLine(Render(n.K));
         return sb.ToString();
     }
 
-    public string RenderInternal(InternalNodeOld<TKey, TVal> n, int indent)
+    public string RenderInternal(InternalNode<TKey, TVal> n, int indent)
     {
         var sb = new StringBuilder();
         sb.Append(new string(' ', 2*indent));
-        sb.AppendFormat("({0}) ", n.ID);
+        sb.Append("I[");
         sb.Append("K");
-        sb.Append(Render(n.K, n.KeysInUse));
-        sb.Append("; P");
-        sb.AppendLine(Render(n.P, n.KeysInUse+1));
-
-        for (int i = 0; i < n.KeysInUse + 1; i++)
+        sb.Append(Render(n.K));
+        sb.AppendLine("]");
+        foreach(var p in n.P.Arr[..(n.Count + 1)])
         {
-            var childNode = t.Nodes[n.P[i]];
-            var childIndent = indent + 1;
-            var renderedChild = Render(childNode, childIndent);
-            sb.Append(renderedChild);
+            sb.Append(Render(p, indent + 1));
         }
 
+
+
         return sb.ToString();
     }
-    public string Render<T>(T[] xs, int elementsUsed)
+    public string Render<T>(ManagedArray<T> xs)
     {
         StringBuilder sb = new();
         sb.Append("[ ");
         var sep = "";
 
-        foreach (var item in xs[..elementsUsed])
+        foreach (var item in xs.Arr[..xs.Count])
         {
             sb.Append(sep);
             sb.Append(item);
             sep = " | ";
         }
 
-        foreach (var item in xs[elementsUsed..])
+        foreach (var item in xs.Arr[xs.Count..])
         {
             sb.Append(sep);
             sb.Append('/');
