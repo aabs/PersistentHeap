@@ -75,7 +75,7 @@ public class InternalNode<TKey, TVal> : NewNode<TKey, TVal>
         // validations
         ArgumentNullException.ThrowIfNull(k);
         ArgumentNullException.ThrowIfNull(n);
-        BPlusTreeException.ThrowIf(K.Arr.Any(x => x.CompareTo(k) == 0),
+        BPlusTreeException.ThrowIf(K.IndexOf(k) >= 0,
             "You cannot insert a duplicate key to an internal node");
         OverfullNodeException.ThrowIf(K.IsFull, "Node is full", this);
 
