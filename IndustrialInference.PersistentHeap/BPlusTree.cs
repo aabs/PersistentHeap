@@ -384,8 +384,24 @@ public class BPlusTree<TKey, TVal>
         return n switch
         {
             NewLeafNode<TKey, TVal> ln => ln,
-            InternalNode<TKey, TVal> internalNode => FindNodeForKey(key, internalNode)
+            InternalNode<TKey, TVal> internalNode => FindNodeForKey(key, GetChildNodeForKey(key, internalNode)),
+            _ => throw new InvalidOperationException($"Unknown node type: {n.GetType()}")
         };
+    }
+
+    private NewNode<TKey, TVal> GetChildNodeForKey(TKey key, InternalNode<TKey, TVal> internalNode)
+    {
+        // Find the appropriate child node based on the key
+        // Keys are sorted, so find the first key that is greater than or equal to the search key
+        for (int i = 0; i < internalNode.Count; i++)
+        {
+            if (key.CompareTo(internalNode.K[i]) <= 0)
+            {
+                return internalNode.P[i];
+            }
+        }
+        // If key is greater than all keys, use the rightmost child
+        return internalNode.P[internalNode.Count];
     }
 
     IEnumerable<NewLeafNode<TKey, TVal>> AllLeafNodes()

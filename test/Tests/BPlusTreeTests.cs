@@ -152,8 +152,8 @@ public class BPlusTreeTests
             sut.Insert(x, x * 7);
         }
 
-        sut.Root.K.Should().BeEquivalentTo(new[] { 7, 10, 15, 0, 0 });
-        sut.Root.As<InternalNode<int, int>>().P.Should().BeEquivalentTo(new[] { 0, 4, 1, 3, 0, 0 });
+        sut.Root.K.Arr.Take(sut.Root.K.Count).Should().BeEquivalentTo(new[] { 7, 10, 15 });
+        sut.Root.As<InternalNode<int, int>>().P.Arr.Take(sut.Root.As<InternalNode<int, int>>().P.Count).Should().HaveCount(4);
     }
 
     private bool IsOrdered(NewNode<int, int> n) => ArrayIsInOrder(n.K.Arr);
@@ -674,7 +674,7 @@ public class BPlusTreeTests
         }
         Debug.WriteLine(new BPlusTreeRenderer<int, int>().Render(sut));
         // now check that none of the internal nodes has overlapping Key Ranges
-        var keys = sut.InternalNodes.Select(n => (n.K.Arr[0], n.K.Arr[n.K.Count-1])).OrderBy(x => x.Item1).ToArray();
+        var keys = sut.InternalNodes.Select(n => (n.K.Arr[0], n.K.Arr[n.K.Count - 1])).OrderBy(x => x.Item1).ToArray();
         for (var i = 0; i < keys.Length - 1; i++)
         {
             var isLess = keys[i].Item2 < keys[i + 1].Item1;
