@@ -1,7 +1,6 @@
 namespace IndustrialInference.BPlusTree;
 
 using System.Diagnostics;
-using System.Text;
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public abstract class NewNode<TKey, TVal>
@@ -22,7 +21,7 @@ public abstract class NewNode<TKey, TVal>
 
     #region Linkage
 
-    public NewNode<TKey, TVal>? NextNode { get; set; } 
+    public NewNode<TKey, TVal>? NextNode { get; set; }
     public InternalNode<TKey, TVal>? ParentNode { get; set; }
     public NewNode<TKey, TVal>? PreviousNode { get; set; }
     public bool IsFull => K.IsFull;

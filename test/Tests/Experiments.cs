@@ -1,13 +1,12 @@
+namespace PersistentHeap.Tests;
+
 using IndustrialInference.PersistentHeap.Old;
 using LightningDB;
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-
-namespace PersistentHeap.Tests;
 
 using StructPacker;
 using Random = System.Random;
@@ -92,9 +91,11 @@ public class Experiments
         var slice = span.Slice(0, 4 * sizeof(int)); // grab a span allowing access to four ints
         var sliceint = MemoryMarshal.Cast<byte, int>(slice.Span);
         var r = new Random();
-        for (var i = 0; i < sliceint.Length; i++) sliceint[i] = r.Next();
+        for (var i = 0; i < sliceint.Length; i++)
+            sliceint[i] = r.Next();
         var sliceint2 = MemoryMarshal.Cast<byte, int>(span.Span);
-        foreach (var j in sliceint2) Console.WriteLine(j);
+        foreach (var j in sliceint2)
+            Console.WriteLine(j);
     }
 
     [Fact]
@@ -104,9 +105,11 @@ public class Experiments
         var slice = span.Slice(0, 4 * sizeof(int)); // grab a span allowing access to four ints
         var sliceint = MemoryMarshal.Cast<byte, int>(slice);
         var r = new Random();
-        for (var i = 0; i < sliceint.Length; i++) sliceint[i] = r.Next();
+        for (var i = 0; i < sliceint.Length; i++)
+            sliceint[i] = r.Next();
         var sliceint2 = MemoryMarshal.Cast<byte, int>(span);
-        foreach (var j in sliceint2) Console.WriteLine(j);
+        foreach (var j in sliceint2)
+            Console.WriteLine(j);
     }
 
     [Fact]
@@ -119,7 +122,8 @@ public class Experiments
         {
             Memory<byte> buf = new byte[1024];
             var sliceint = MemoryMarshal.Cast<byte, int>(buf.Span);
-            for (var i = 0; i < sliceint.Length; i++) sliceint[i] = r.Next();
+            for (var i = 0; i < sliceint.Length; i++)
+                sliceint[i] = r.Next();
             f.Write(buf.Span);
         }
 
@@ -127,7 +131,8 @@ public class Experiments
         {
             Memory<byte> buf = new byte[2048];
             var sliceint = MemoryMarshal.Cast<byte, int>(buf.Span);
-            for (var i = 0; i < sliceint.Length; i++) sliceint[i] = r.Next();
+            for (var i = 0; i < sliceint.Length; i++)
+                sliceint[i] = r.Next();
             f.Write(buf.Span);
         }
 
@@ -142,7 +147,8 @@ public class Experiments
                 using var ummm = new UnmanagedMemoryManager<byte>(ptr, 256);
                 var span = ummm.GetSpan();
                 var sliceint2 = MemoryMarshal.Cast<byte, int>(span);
-                foreach (var j in sliceint2) Console.WriteLine(j);
+                foreach (var j in sliceint2)
+                    Console.WriteLine(j);
             }
         }
     }

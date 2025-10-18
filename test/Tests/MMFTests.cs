@@ -1,10 +1,10 @@
+namespace PersistentHeap.Tests;
+
 using DotNext.IO.MemoryMappedFiles;
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
-
-namespace PersistentHeap.Tests;
 
 
 public class MemoryMappedFilesTests
@@ -102,7 +102,7 @@ public class MemoryMappedFilesTests
         }
     }
 
-    [Fact (Skip="interactive")]
+    [Fact(Skip = "interactive")]
     public void Test2()
     {
         // create a memory-mapped file of length 1000 bytes and give it a 'map name' of 'test'  
