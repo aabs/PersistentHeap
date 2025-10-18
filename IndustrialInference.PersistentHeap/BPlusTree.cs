@@ -61,7 +61,8 @@ public class BPlusTree<TKey, TVal>
 
         if (root is InternalNode<TKey, TVal> intlNode)
         {
-            return [intlNode, .. intlNode.P.Arr[..intlNode.Count].SelectMany(x => GetChildNodes(x))];
+            // Internal node with k keys has k+1 child pointers
+            return [intlNode, .. intlNode.P.Arr[..(intlNode.Count + 1)].SelectMany(x => GetChildNodes(x))];
         }
 
         return [];

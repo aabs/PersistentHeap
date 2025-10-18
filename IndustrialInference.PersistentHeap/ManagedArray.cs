@@ -51,7 +51,17 @@ public class ManagedArray<T>
         return idx >= 0 ? idx : ~idx;
     }
 
-    public int IndexOf(T value) => Array.IndexOf(Arr, value);
+    public int IndexOf(T value)
+    {
+        for (int i = 0; i < Count; i++)
+        {
+            if (EqualityComparer<T>.Default.Equals(Arr[i], value))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     public void Append(T t)
     {
