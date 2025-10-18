@@ -47,7 +47,28 @@ public class InternalNode<TKey, TVal> : NewNode<TKey, TVal>
     {
     }
 
-    public void Delete(TKey k) => throw new NotImplementedException();
+    public void Delete(TKey k)
+    {
+        ArgumentNullException.ThrowIfNull(k);
+
+        var idx = K.IndexOf(k);
+        if (idx == -1)
+        {
+            throw new KeyNotFoundException($"Key {k} not found in internal node");
+        }
+
+        K.DeleteAt(idx);
+        // When deleting a key, we also need to remove one pointer
+        // Typically remove the pointer to the right of the deleted key
+        if (idx < P.Count - 1)
+        {
+            P.DeleteAt(idx + 1);
+        }
+        else
+        {
+            P.DeleteAt(idx);
+        }
+    }
 
     public void Insert(TKey k, NewNode<TKey, TVal> n, bool overwriteOnEquality = true)
     {

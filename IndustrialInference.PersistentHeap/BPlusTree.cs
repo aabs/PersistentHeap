@@ -86,6 +86,11 @@ public class BPlusTree<TKey, TVal>
     {
         get
         {
+            if (Root is null)
+            {
+                throw new KeyNotFoundException($"Key {key} not found: tree is empty");
+            }
+
             var n = FindNodeForKey(key, Root);
 
             return n[key];
@@ -103,6 +108,11 @@ public class BPlusTree<TKey, TVal>
     /// </returns>
     public bool ContainsKey(TKey key)
     {
+        if (Root is null)
+        {
+            return false;
+        }
+
         var n = FindNodeForKey(key, Root);
 
         return n.ContainsKey(key);
@@ -130,6 +140,11 @@ public class BPlusTree<TKey, TVal>
     /// </exception>
     public (TKey, TVal)? Delete(TKey key)
     {
+        if (Root is null)
+        {
+            throw new KeyNotFoundException($"Key {key} not found: tree is empty");
+        }
+
         var n = FindNodeForKey(key, Root);
 
         for (var i = 0; i < n.Count; i++)
@@ -236,7 +251,9 @@ public class BPlusTree<TKey, TVal>
     /// <returns>
     ///   The node containing the key.
     /// </returns>
-    public NewNode<TKey, TVal> Search(TKey key) => FindNodeForKey(key, Root);
+    public NewNode<TKey, TVal> Search(TKey key) => Root is null
+        ? throw new KeyNotFoundException($"Key {key} not found: tree is empty")
+        : FindNodeForKey(key, Root);
 
     public IEnumerable<TKey> AllKeys() => AllKeys(Root);
 
