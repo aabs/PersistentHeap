@@ -5,6 +5,7 @@ public class InternalNodeTests
 {
     // a node created with degree N should have N-1 keys and N pointers
     [Property]
+    [Trait("Category", "Property")]
     public void internal_node_created_with_degree_n_has_n_minus_1_keys_and_n_pointers(PositiveInt degreeVal)
     {
         var degree = 4 + degreeVal.Get;
@@ -12,10 +13,11 @@ public class InternalNodeTests
         CreateAndPopulateLeafNodes(degree, out var leafNode1, out var leafNode2);
         var node = new InternalNode<int, int>([degree], [leafNode1, leafNode2], degree);
         Assert.Equal(degree, node.K.Arr.Length);
-        Assert.Equal(degree+1, node.P.Arr.Length);
+        Assert.Equal(degree + 1, node.P.Arr.Length);
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void a_new_internal_node_has_1_key_and_2_sub_nodes(PositiveInt degreeVal)
     {
         var degree = 4 + degreeVal.Get;
@@ -28,6 +30,7 @@ public class InternalNodeTests
 
     // a new internal node has 1 key and 2 sub-nodes
     [Property]
+    [Trait("Category", "Property")]
     public void creating_a_new_node_with_empty_keys_or_pointers_results_in_exceptions(PositiveInt degreeVal)
     {
         var degree = 4 + degreeVal.Get;
@@ -48,6 +51,7 @@ public class InternalNodeTests
 
     // a new internal node has 1 key and 2 sub-nodes
     [Property]
+    [Trait("Category", "Property")]
     public void the_sizes_of_keys_and_pointers_should_always_match_otherwise_exception(PositiveInt keysVal, PositiveInt nodesVal)
     {
         var degree = 10;
@@ -74,7 +78,7 @@ public class InternalNodeTests
     {
         var sut = CreateInternalNode(4);
         var ln = CreateSomeLeafNodes(4, 1).First();
-        sut.Insert(sut.K[0]+1, ln);
+        sut.Insert(sut.K[0] + 1, ln);
         sut.Count.Should().Be(2);
         ArrayIsInOrder(sut.K.Arr);
     }
@@ -112,7 +116,7 @@ public class InternalNodeTests
         var leafNode = new NewLeafNode<int, int>(degree);
         for (var x = 0; x < numNodes; x++)
         {
-            for (var i = 0; i < degree-1; i++)
+            for (var i = 0; i < degree - 1; i++)
             {
                 leafNode.K[i] = (x * degree) + i;
                 leafNode.V[i] = i;

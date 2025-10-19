@@ -21,6 +21,7 @@ public class BTreeSetTests
     public PageManager<int> PageManager { get; set; }
 
     [Category("Slow")]
+    [Trait("Category", "Slow")]
     [Fact(Skip = "too slow")]
     public void CanAddLargeNumbersOfElements()
     {

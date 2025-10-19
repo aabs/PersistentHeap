@@ -7,6 +7,7 @@ using Random = System.Random;
 public class LeafNodePropertyTests
 {
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void adding_a_key_to_a_node_that_already_contains_it_does_not_add_anything(int[] xs)
     {
         var sut = new NewLeafNode<long, long>(Constants.MaxKeysPerNode);
@@ -23,6 +24,7 @@ public class LeafNodePropertyTests
     }
 
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void adding_a_key_to_a_node_that_already_contains_it_does_not_add_anything__case1()
     {
         int[] xs = [3, 2, 4];
@@ -39,6 +41,7 @@ public class LeafNodePropertyTests
         actual.Should().Be(expected);
     }
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void adding_a_new_key_to_a_non_full_node_increases_keys_by_one(int[] xs)
     {
         if (xs.Length > Constants.MaxKeysPerNode)
@@ -55,6 +58,7 @@ public class LeafNodePropertyTests
     }
 
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void adding_keys_to_a_node_leaves_the_node_keys_in_order(int[] xs)
     {
         var sut = new NewLeafNode<long, long>(Constants.MaxKeysPerNode);
@@ -69,6 +73,7 @@ public class LeafNodePropertyTests
     }
 
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void removing_a_key_from_a_node_reduces_the_number_of_keys_by_one(int[] xs)
     {
         var sut = new NewLeafNode<long, long>(Constants.MaxKeysPerNode);
@@ -84,6 +89,7 @@ public class LeafNodePropertyTests
     }
 
     [Property(Arbitrary = [typeof(IntArrayArbitrary)])]
+    [Trait("Category", "Property")]
     public void removing_a_key_from_a_node_leaves_the_node_keys_in_order(int[] xs)
     {
         var sut = new NewLeafNode<long, long>(Constants.MaxKeysPerNode);
@@ -111,6 +117,7 @@ public class LeafNodePropertyTests
     }
 
     [Property(Arbitrary = [typeof(IntArrayOfUniqueValuesArbitrary)])]
+    [Trait("Category", "Property")]
     public void any_key_in_a_node_will_always_be_found_by_contains(int[] xs)
     {
         var sut = new NewLeafNode<long, long>(Constants.MaxKeysPerNode);

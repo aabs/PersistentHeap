@@ -11,6 +11,7 @@ public class BPlusTreeTests
     #region Testing Search Capabilities
 
     [Property]
+    [Trait("Category", "Property")]
     public void tree_preserves_all_keys_and_order_across_splits_for_varied_degree_and_sizes(int degreeCandidate, int[] rawKeys)
     {
         // constrain degree to a sensible test range
@@ -79,6 +80,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void a_tree_with_many_entries_can_find_each_element(KeyValuePair<int, int>[] testData)
     {
         // must be unique keys
@@ -100,6 +102,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void a_tree_with_one_entry_can_search_for_the_value(int k, int v)
     {
         var sut = new BPlusTree<int, int>();
@@ -108,6 +111,7 @@ public class BPlusTreeTests
     }
 
     [Fact]
+    [Trait("Category", "Slow")]
     public void after_creation_all_node_keys_remain_ordered()
     {
         const int numSamples = 5000;
@@ -125,6 +129,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void all_keys_in_leaf_nodes_are_stored_in_order(KeyValuePair<int, int>[] testData)
     {
         // must be unique keys
@@ -147,6 +152,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void inserting_duplicate_keys_leaves_last_value_in_tree(int k, int v1, int v2)
     {
         if (v1 == v2)
@@ -161,6 +167,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void searching_an_empty_tree_always_throws_KeyNotFoundException(long x)
     {
         var sut = new BPlusTree<long, long>();
@@ -198,6 +205,7 @@ public class BPlusTreeTests
     #region Testing Splitting Behaviour
 
     [Fact]
+    [Trait("Category", "Slow")]
     public void after_split_internal_nodes_remain_ordered()
     {
         const int numSamples = 5000;
@@ -221,6 +229,7 @@ public class BPlusTreeTests
     }
 
     [Fact]
+    [Trait("Category", "Slow")]
     public void after_split_leaf_nodes_remain_ordered()
     {
         const int numSamples = 5000;
@@ -253,6 +262,7 @@ public class BPlusTreeTests
     }
 
     [Fact]
+    [Trait("Category", "Slow")]
     public void before_split_internal_nodes_remain_ordered()
     {
         const int numSamples = 5000;
@@ -275,6 +285,7 @@ public class BPlusTreeTests
 
     }
     [Fact]
+    [Trait("Category", "Slow")]
     public void before_split_leaf_nodes_remain_ordered()
     {
         const int numSamples = 5000;
@@ -294,6 +305,7 @@ public class BPlusTreeTests
     #endregion
 
     [Property]
+    [Trait("Category", "Property")]
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree(int[] xs)
     {
         // trivial case
@@ -332,6 +344,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void a_known_key_and_its_associated_data_can_be_removed_from_the_tree_case_1()
     {
         int[] xs = [0];
@@ -366,6 +379,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void adding_a_known_value_into_a_tree_leaves_the_tree_with_the_same_Count_as_before(int[] xs)
     {
         // trivial case
@@ -410,6 +424,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void adding_a_new_value_into_a_tree_leaves_the_tree_with_a_Count_one_larger_than_before(int[] xs)
     {
         var sut = new BPlusTree<long, long>();
@@ -458,6 +473,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void adding_an_element_to_an_empty_tree_leave_the_root_node_with_one_element(int i)
     {
         var sut = new BPlusTree<long, long>();
@@ -499,6 +515,7 @@ public class BPlusTreeTests
         sut.LeafNodes.Count().Should().Be(2);
     }
     [Fact]
+    [Trait("Category", "Property")]
     public void can_add_any_integer_to_tree() =>
         Prop.ForAll<int>(i =>
             {
@@ -510,6 +527,7 @@ public class BPlusTreeTests
             .QuickCheckThrowOnFailure();
 
     [Property]
+    [Trait("Category", "Property")]
     public void can_add_any_number_of_items_to_tree(int[] xs)
     {
         var sut = new BPlusTree<long, long>();
@@ -638,6 +656,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void removing_an_unknown_value_from_a_tree_results_in_an_unknown_key_exception(int[] xs)
     {
         // trivial case
@@ -657,6 +676,7 @@ public class BPlusTreeTests
     }
 
     [Property]
+    [Trait("Category", "Property")]
     public void searching_for_a_key_returns_the_same_value_as_was_inserted(Dictionary<int, string> testData)
     {
         // trivial case

@@ -23,6 +23,8 @@ public class Experiments
     }
 
     [Fact]
+    [Trait("Category", "Slow")]
+    [Trait("Category", "External")]
     public void CreateAndUseLightningDb()
     {
         if (!LmdbEnabled())
@@ -50,6 +52,8 @@ public class Experiments
     }
 
     [Fact]
+    [Trait("Category", "Slow")]
+    [Trait("Category", "External")]
     public void GetAndSetPageViaLDB()
     {
         if (!LmdbEnabled())

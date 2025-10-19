@@ -31,14 +31,14 @@ build-release: clean restore
 
 # Run all tests
 test: build
-    @echo "🧪 Running all tests..."
-    dotnet test --no-build --verbosity normal
-    @echo "✅ Tests completed"
+    @echo "🧪 Running default tests (excluding Slow and Property)..."
+    dotnet test --no-build --verbosity normal --filter "Category!=Slow&Category!=Property&Category!=External"
+    @echo "✅ Default tests completed"
 
 # Run tests with coverage
 test-coverage: build
-    @echo "🧪 Running tests with coverage..."
-    dotnet test --no-build --collect:"XPlat Code Coverage" --verbosity normal
+    @echo "🧪 Running tests with coverage (excluding Slow/Property/External)..."
+    dotnet test --no-build --collect:"XPlat Code Coverage" --verbosity normal --filter "Category!=Slow&Category!=Property&Category!=External"
     @echo "✅ Test coverage completed"
 
 # Run only working tests (skip problematic ones)
@@ -49,9 +49,21 @@ test-working: build
 
 # Run tests excluding property-based tests that might hit bugs
 test-safe: build
-    @echo "🧪 Running safe tests (no property-based tests)..."
-    dotnet test test/Tests/Tests.csproj --no-build --verbosity normal --filter "Category!=Property"
+    @echo "🧪 Running safe tests (no Property/Slow/External)..."
+    dotnet test test/Tests/Tests.csproj --no-build --verbosity normal --filter "Category!=Property&Category!=Slow&Category!=External"
     @echo "✅ Safe tests completed"
+
+# Run all tests including slow and property-based
+test-all: build
+    @echo "🧪 Running all tests (including Slow/Property/External)..."
+    dotnet test --no-build --verbosity normal
+    @echo "✅ All tests completed"
+
+# Run only slow tests
+test-slow: build
+    @echo "🐢 Running slow tests only..."
+    dotnet test --no-build --verbosity normal --filter "Category=Slow"
+    @echo "✅ Slow tests completed"
 
 # Run only specific test class
 test-class CLASS: build
