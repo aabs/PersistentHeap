@@ -282,10 +282,14 @@ public class BPlusTree<TKey, TVal>
 
     private InternalNode<TKey, TVal> CreateNewInternalNode(TKey key, NewNode<TKey, TVal> leftChild,
         NewNode<TKey, TVal> rightChild) =>
-        new([key], [leftChild, rightChild], degree);
+        CreateNewInternalNode([key], [leftChild, rightChild]);
 
-    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey[] keys, NewNode<TKey, TVal>[] children) =>
-        new(keys, children, degree);
+    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey[] keys, NewNode<TKey, TVal>[] children)
+    {
+        var node = new InternalNode<TKey, TVal>(keys, children, degree);
+        Nodes.Add(node);
+        return node;
+    }
 
     private NewLeafNode<TKey, TVal> CreateNewLeafNode(TKey[] keys, TVal[] items)
     {
@@ -300,6 +304,9 @@ public class BPlusTree<TKey, TVal>
     {
         OnNodeSplitting(nodeToSplit);
         var (nlo, nhi) = nodeToSplit.Split();
+        // Add the new nodes to the tree
+        Nodes.Add(nlo);
+        Nodes.Add(nhi);
         var parent = nodeToSplit.ParentNode;
         var keyForParent = nhi.Min;
 
@@ -309,12 +316,14 @@ public class BPlusTree<TKey, TVal>
             // new parent to be the new root
             parent = CreateNewInternalNode(keyForParent, nlo, nhi);
             nhi.Delete(keyForParent);
+            Nodes.Remove(nodeToSplit); // Remove the old root
             Root = parent;
             return parent;
         }
 
         // if parent is not null, then we need to perform the copy-up operation
         parent!.P.ReplaceValue(nodeToSplit, nlo);
+        Nodes.Remove(nodeToSplit);
         InsertIntoInternalNode(keyForParent, parent, nhi);
         OnNodeSplit(nlo, nhi);
         return parent;
@@ -325,20 +334,45 @@ public class BPlusTree<TKey, TVal>
         OnNodeSplitting(n);
 
         var (nlo, nhi) = n.Split();
+        // Add the new nodes to the tree
+        Nodes.Add(nlo);
+        Nodes.Add(nhi);
         var parent = n.ParentNode;
 
         if (parent is null)
         {
             // if the parent was null, then the leaf node was also the root, and we need to create a
             // new parent to be the new root
-            parent = CreateNewInternalNode(nlo.Max, nlo, nhi);
+            parent = CreateNewInternalNode(nhi.Min, nlo, nhi);
+            // For leaf splits, don't delete the separator from nhi
+            Nodes.Remove(n); // Remove the old root
             Root = parent;
+            // Insert the new key into the appropriate child
+            if (newKey.CompareTo(nhi.Min) >= 0)
+            {
+                nhi.Insert(newKey, newItem);
+            }
+            else
+            {
+                nlo.Insert(newKey, newItem);
+            }
             return;
         }
 
         // if parent is not null, then we need to perform the copy-up operation
         parent!.P.ReplaceValue(n, nlo);
-        InsertIntoInternalNode(nlo.Max, parent, nhi);
+        Nodes.Remove(n);
+        InsertIntoInternalNode(nhi.Min, parent, nhi);
+        // For leaf splits, don't delete the separator from nhi
+        // Insert the new key into the appropriate child
+        if (newKey.CompareTo(nhi.Min) >= 0)
+        {
+            nhi.Insert(newKey, newItem);
+        }
+        else
+        {
+            nlo.Insert(newKey, newItem);
+        }
         /*
         var parent = n.ParentNode;
         var midPoint = degree / 2;

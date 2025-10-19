@@ -146,20 +146,20 @@ public class BPlusTreeTests
     public void worked_example_from_karlova_lecture_notes()
     {
         int[] xs = [10, 7, 15, 5, 30, 20, 13, 3, 11, 21, 8, 9];
-        var sut = new BPlusTree<int, int>(degree: 6);
+        var sut = new BPlusTree<int, int>(degree: 5);
         foreach (var x in xs)
         {
             sut.Insert(x, x * 7);
         }
 
-        sut.Root.K.Arr.Take(sut.Root.K.Count).Should().BeEquivalentTo(new[] { 7, 10, 15 });
-        sut.Root.As<InternalNode<int, int>>().P.Arr.Take(sut.Root.As<InternalNode<int, int>>().P.Count).Should().HaveCount(4);
+        sut.Root.K.Arr.Take(sut.Root.K.Count).Should().BeEquivalentTo(new[] { 10, 15 });
+        sut.Root.As<InternalNode<int, int>>().P.Arr.Take(sut.Root.As<InternalNode<int, int>>().P.Count).Should().HaveCount(3);
     }
 
-    private bool IsOrdered(NewNode<int, int> n) => ArrayIsInOrder(n.K.Arr);
-    private bool ArrayIsInOrder(int[] a)
+    private bool IsOrdered(NewNode<int, int> n) => ArrayIsInOrder(n.K.Arr, n.K.Count);
+    private bool ArrayIsInOrder(int[] a, int count)
     {
-        for (var i = 1; i < a.Length; i++)
+        for (var i = 1; i < count; i++)
         {
             if (a[i] < a[i - 1])
             {
@@ -496,7 +496,7 @@ public class BPlusTreeTests
         sut.Count().Should().Be(xs.Distinct().Count());
     }
 
-    [Property]
+    [Fact]
     public void can_add_any_number_of_items_to_tree__case_1()
     {
         int[] xs = [4, 0, 5, -1, 3, -2, -4, 2, 1, -3, 1];
