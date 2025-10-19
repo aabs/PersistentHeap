@@ -1,30 +1,25 @@
 namespace Benchmarks;
 
+#region
+
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using IndustrialInference.BPlusTree;
-using LightningDB;
-using StructPacker;
+
+#endregion
 
 [SimpleJob(RuntimeMoniker.Net80, baseline: true)]
 [RPlotExporter]
 public class BPlusTreeBenchmark
 {
-    private BTreeSet<int> sut;
-    private Random r;
-
-    [Params(1, 2, 3, 5, 10, 15, 20)]
-#pragma warning disable IDE1006 // Naming Styles
-    public int N;
-#pragma warning restore IDE1006 // Naming Styles
+    [Params(1, 2, 3, 5, 10)]
+    public int ElementsToInsertShift { get; set; }
+    private Random random;
 
     [GlobalSetup]
     public void Setup()
     {
-        var opts = new PageOptions { AllowDuplicates = false, PageSize = 1 << 10 };
-        var pm = new PageManager<int>(opts);
-        r = new Random(29);
-        sut = new BTreeSet<int>(int.MinValue, pm);
+        random = new Random(29);
     }
 
     [GlobalCleanup]
@@ -34,25 +29,12 @@ public class BPlusTreeBenchmark
     }
 
     [Benchmark]
-    public void add_1_million_elements()
+    public void add_elements()
     {
-        for (var i = 0; i < 1 << N; i++)
+        var sut = new BPlusTree<long, long>();
+        for (var i = 0; i < 1 << ElementsToInsertShift; i++)
         {
-            sut.Add(new KeyPtr<int>(r.Next(1, int.MaxValue), default));
+            sut.Insert(i, random.Next(1, int.MaxValue));
         }
-    }
-
-    // Convert a byte array to an Object
-    [Pack]
-    public struct ContentsBlock
-    {
-        public ContentsBlock(){}
-        public ContentsBlock(int version, int soIndexBlockName)
-        {
-            Version = version;
-            SoIndexBlockName = soIndexBlockName;
-        }
-        public int Version { get; set; }
-        public int SoIndexBlockName { get; set; }
     }
 }

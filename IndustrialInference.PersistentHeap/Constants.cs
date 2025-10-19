@@ -1,6 +1,10 @@
-﻿namespace IndustrialInference.BPlusTree;
+namespace IndustrialInference.BPlusTree;
 
 public static class Constants
 {
-    public const long MaxNodeSize = 10;
+#if DEBUG
+    public const int MaxKeysPerNode = 4;
+#else
+    public const int MaxKeysPerNode = 100;
+#endif
 }

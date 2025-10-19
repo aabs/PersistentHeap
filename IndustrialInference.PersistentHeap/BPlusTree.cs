@@ -1,232 +1,160 @@
 namespace IndustrialInference.BPlusTree;
-
-public class BPlusTree
+/// <summary>
+///   Represents a B+ tree data structure.
+/// </summary>
+/// <typeparam name="TKey">
+///   The type of the keys in the tree.
+/// </typeparam>
+/// <typeparam name="TVal">
+///   The type of the values in the tree.
+/// </typeparam>
+/// <remarks>
+///   <para>Here is a quick representation of the data structure for aiding visualisation
+///     <code>
+///<![CDATA[
+///
+///       [P,13,P,/,P]
+///        |    |
+///       /      \_________________
+///      /                         \
+///     [P,5,P,10,P]               [P,20,P,/,P]
+///     /    |     \_               |     \
+///    /     |       \              |      \
+///   [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
+///]]>
+///     </code>
+///   </para>
+/// </remarks>
+public class BPlusTree<TKey, TVal>
+    where TKey : IComparable<TKey>
 {
-    public BPlusTree() => Nodes = new List<Node> { new() { IsLeaf = true } };
+    private readonly int degree;
 
-    public List<Node> Nodes { get; init; }
-    public Node Root => Nodes[(int)RootIndexNode];
-    public long RootIndexNode { get; private set; }
+    #region Public interface
 
-    public int Count()
+    /// <summary>
+    ///   Initializes a new instance of the <see cref="BPlusTree{TKey, TVal}" /> class.
+    /// </summary>
+    public BPlusTree(int degree = Constants.MaxKeysPerNode)
     {
-        if (Nodes.Count(n => !n.IsDeleted) == 1)
-        {
-            return (int)Root.KeysInUse;
-        }
-
-        return (int)Nodes.Where(n => !n.IsDeleted && n.IsLeaf).Sum(n => n.KeysInUse);
+        Root = new NewLeafNode<TKey, TVal>(degree);
+        this.degree = degree;
     }
 
-    public void Insert(long key, long reference)
-        => InsertTree(key, reference, RootIndexNode);
+    public IEnumerable<InternalNode<TKey, TVal>> InternalNodes
+            => Nodes.Where(n => n is InternalNode<TKey, TVal>).Cast<InternalNode<TKey, TVal>>();
 
-    public void SafeInsertToNode(Node n, long key, long r)
+    public IEnumerable<NewLeafNode<TKey, TVal>> LeafNodes
+            => Nodes.Where(n => n is NewLeafNode<TKey, TVal>).Cast<NewLeafNode<TKey, TVal>>();
+
+    /// <summary>
+    ///   Gets the list of nodes in the tree.
+    /// </summary>
+    public List<NewNode<TKey, TVal>> Nodes => GetChildNodes(Root).ToList();
+
+    IEnumerable<NewNode<TKey, TVal>> GetChildNodes(NewNode<TKey, TVal> root)
     {
-        try
+        if (root is NewLeafNode<TKey, TVal>)
         {
-            n.Insert(key, r);
+            return [root];
         }
-        catch (OverfullNodeException)
+
+        if (root is InternalNode<TKey, TVal> intlNode)
         {
-            Split(n, key, r);
+            // Internal node with k keys has k+1 child pointers
+            return [intlNode, .. intlNode.P.Arr[..(intlNode.Count + 1)].SelectMany(x => GetChildNodes(x))];
         }
+
+        return [];
     }
 
-    public void InsertTree(long key, long r, long index)
+    /// <summary>
+    ///   Gets the root node of the tree.
+    /// </summary>
+    public NewNode<TKey, TVal> Root { get; set; }
+
+
+    /// <summary>
+    ///   Gets or sets the value associated with the specified key.
+    /// </summary>
+    /// <param name="key">
+    ///   The key to search for.
+    /// </param>
+    /// <returns>
+    ///   The value associated with the key, or null if the key is not found.
+    /// </returns>
+    public TVal? this[TKey key]
     {
-        // get the node specified by the index
-        var n = FindNodeForKey(key, Get(index));
-        if (n.IsDeleted)
+        get
         {
-            throw new BPlusTreeException("Attempted to insert into deleted node");
-        }
-
-        if (n.ContainsKey(key))
-        {
-            SafeInsertToNode(n, key, r);
-            return;
-        }
-
-        // if the node is full, split it first, then insert the data to the new subtree root
-        if (n.IsFull)
-        {
-            var newParent = Split(n, key, r);
-            InsertTree(key, r, newParent);
-        }
-
-        if (n.IsLeaf)
-        {
-            SafeInsertToNode(n, key, r);
-            return;
-        }
-
-        var keyIndex = 0;
-        while (n.K[keyIndex] < key && keyIndex < n.KeysInUse)
-        {
-            keyIndex++;
-        }
-
-        var targetNode = Get(n.P[keyIndex]);
-        try
-        {
-            targetNode.Insert(key, r);
-        }
-        catch (OverfullNodeException)
-        {
-            var newParent = Split(targetNode, key, r);
-            InsertTree(key, r, newParent);
-        }
-
-
-        //for (var i = 0; i < n.KeysInUse; i++)
-        //{
-        //    if (key < n.K[i])
-        //    {
-        //        InsertTree(key, r, n.P[i]);
-        //        return;
-        //    }
-        //}
-
-        //InsertTree(key, r, n.P[n.KeysInUse]);
-    }
-
-    public Node Search(long key) => FindNodeForKey(key, Root);
-
-    private long CreateNewInternalNode(long key, long leftChild, long rightChild)
-    {
-        var n = new Node(new[] { key }, new[] { leftChild, rightChild });
-        var newIndex = Nodes.Count;
-        Nodes.Add(n);
-        return newIndex;
-    }
-
-    private long CreateNewLeafNode(long[] keys)
-    {
-        var n = new Node(keys);
-        var newIndex = Nodes.Count;
-        Nodes.Add(n);
-        return newIndex;
-    }
-
-    private Node Get(long id) => Nodes[(int)id];
-
-    private Node GetIndirect(long id, Node n) => Nodes[(int)n.P[id]];
-
-    private Node FindNodeForKey(long key, Node node)
-    {
-        if (!node.IsLeaf)
-        {
-            // if this node is not a leaf, then we need to search the keys to
-            // find the node that contains the data we are after
-            var i = 0;
-            while (i < node.KeysInUse && node.K[i] < key)
+            if (Root is null)
             {
-                i++;
+                throw new KeyNotFoundException($"Key {key} not found: tree is empty");
             }
 
-            //if (i >= node.KeysInUse)
-            //{
-            //    return Get(node.KeysInUse);
-            //}
+            var n = FindNodeForKey(key, Root);
 
-            var n2 = GetIndirect(i, node);
-            return FindNodeForKey(key, n2);
+            return n[key];
         }
-
-        return node;
     }
 
-    private long Split(Node n, long newKey, long newRef)
-        => n.IsLeaf switch
-        {
-            true => SplitLeafNode(n, newKey, newRef),
-            false => SplitInternalNode(n, newKey, newRef)
-        };
-
-    private long SplitInternalNode(Node n, long newKey, long newRef) => throw new NotImplementedException();
-
-    private long SplitLeafNode(Node n, long newKey, long newRef)
+    /// <summary>
+    ///   Determines whether the tree contains the specified key.
+    /// </summary>
+    /// <param name="key">
+    ///   The key to search for.
+    /// </param>
+    /// <returns>
+    ///   true if the key is found; otherwise, false.
+    /// </returns>
+    public bool ContainsKey(TKey key)
     {
-        // make arrays 1 bigger than the overflowing node, to hold the sorted data
-        var tmpKeys = new long[n.K.Length + 1];
-
-        // copy contents of node across to the new arrays, inserting the new key
-
-        var indexIntoOldNode = 0;
-        var indexIntoNewNode = 0;
-
-        while (indexIntoOldNode < n.KeysInUse && n.K[indexIntoOldNode] < newKey)
+        if (Root is null)
         {
-            tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
-            indexIntoOldNode++;
-            indexIntoNewNode++;
+            return false;
         }
 
-        tmpKeys[indexIntoNewNode] = newKey;
-        indexIntoNewNode++;
-        while (indexIntoOldNode < n.KeysInUse)
-        {
-            tmpKeys[indexIntoNewNode] = n.K[indexIntoOldNode];
-            indexIntoOldNode++;
-            indexIntoNewNode++;
-        }
-
-
-        //for (var i = n.K.Length-1; i > 0; i--)
-        //{
-        //    if (n.K[i] < newKey)
-        //    {
-        //        tmpKeys[i + 1] = newKey;
-        //    }
-        //    else
-        //    {
-        //        tmpKeys[i + 1] = n.K[i];
-        //    }
-        //}
-
-        var midPoint = tmpKeys.Length / 2;
-        var child1 = CreateNewLeafNode(tmpKeys[..midPoint]);
-        var child2 = CreateNewLeafNode(tmpKeys[midPoint..]);
-        var newParentIndex = CreateNewInternalNode(tmpKeys[midPoint - 1], child1, child2);
-        var oldNode = DeleteNode(n);
-        if (Root == oldNode)
-        {
-            RootIndexNode = newParentIndex;
-        }
-
-        return newParentIndex;
-    }
-
-    private Node DeleteNode(Node oldNode)
-    {
-        //Nodes.Remove(oldNode);
-        oldNode.IsDeleted = true;
-        return oldNode;
-    }
-
-    /*
-     *                [P,13,P,/,P]
-     *                 |    |
-     *                /      \_______
-     *               /               \
-     *     [P,5,P,10,P]               [P,20,P,/,P]
-     *     /    |     \_               |     \
-     *    /     |       \              |      \
-     * [1,4] -> [5,9] -> [10,12] -> [13,18] -> [20,/]
-     *
-     */
-
-    public (long, long)? Delete(long key)
-    {
         var n = FindNodeForKey(key, Root);
 
-        for (var i = 0; i < n.KeysInUse; i++)
+        return n.ContainsKey(key);
+    }
+
+    /// <summary>
+    ///   Gets the number of key-value pairs in the tree.
+    /// </summary>
+    /// <returns>
+    ///   The number of key-value pairs in the tree.
+    /// </returns>
+    public int Count() => LeafNodes.Sum(n => n.Count);
+
+    /// <summary>
+    ///   Deletes the key-value pair with the specified key from the tree.
+    /// </summary>
+    /// <param name="key">
+    ///   The key of the key-value pair to delete.
+    /// </param>
+    /// <returns>
+    ///   The deleted key-value pair.
+    /// </returns>
+    /// <exception cref="KeyNotFoundException">
+    ///   Thrown when the specified key is not found in the tree.
+    /// </exception>
+    public (TKey, TVal)? Delete(TKey key)
+    {
+        if (Root is null)
         {
-            if (n.K[i] == key)
+            throw new KeyNotFoundException($"Key {key} not found: tree is empty");
+        }
+
+        var n = FindNodeForKey(key, Root);
+
+        for (var i = 0; i < n.Count; i++)
+        {
+            if (n.K[i].CompareTo(key) == 0)
             {
-                var r = n.P[i];
+                var r = n.V[i];
                 n.Delete(key);
+
                 return (key, r);
             }
         }
@@ -234,9 +162,369 @@ public class BPlusTree
         throw new KeyNotFoundException();
     }
 
-    public bool ContainsKey(long key)
+    /// <summary>
+    ///   Inserts a key-value pair into the tree.
+    /// </summary>
+    /// <param name="key">
+    ///   The key of the key-value pair to insert.
+    /// </param>
+    /// <param name="value">
+    ///   The value of the key-value pair to insert.
+    /// </param>
+    public void Insert(TKey key, TVal value)
+            => Insert(key, value, Root);
+
+    public void InsertIntoInternalNode(TKey key, InternalNode<TKey, TVal> nodeToInsertInto, NewNode<TKey, TVal> nodeToInsert)
     {
-        var n = FindNodeForKey(key, Root);
-        return n.ContainsKey(key);
+        try
+        {
+            nodeToInsertInto.Insert(key, nodeToInsert);
+        }
+        catch (OverfullNodeException e)
+        {
+            if (e.SourceNode is InternalNode<TKey, TVal> internalNode)
+            {
+                // Split the full internal node and then retry insertion into the resulting parent
+                var parentAfterSplit = SplitInternalNode(internalNode);
+                InsertIntoInternalNode(key, parentAfterSplit, nodeToInsert);
+            }
+        }
     }
+
+    /// <summary>
+    ///   Inserts a key-value pair into the tree starting from the specified index.
+    /// </summary>
+    /// <param name="n"></param>
+    /// <param name="key">
+    ///     The key of the key-value pair to insert.
+    /// </param>
+    /// <param name="value">
+    ///     The value of the key-value pair to insert.
+    /// </param>
+    /// <param name="index">
+    ///   The index of the node to start the insertion from.
+    /// </param>
+    public void InsertIntoLeaf(NewLeafNode<TKey, TVal> n, TKey key, TVal value)
+    {
+        n.Insert(key, value);
+    }
+
+    public void InsertIntoInternal(InternalNode<TKey, TVal> n, TKey key, TVal value)
+    {
+        var idx = n.K.FindInsertionPoint(key);
+        var childIndex = (idx < n.Count && key.CompareTo(n.K[idx]) == 0)
+            ? idx + 1 // equality goes to the right partition
+            : idx;
+        Insert(key, value, n.P[childIndex]);
+    }
+
+    public void Insert(TKey key, TVal value, NewNode<TKey, TVal> n)
+    {
+        try
+        {
+            if (n is NewLeafNode<TKey, TVal> ln)
+            {
+                InsertIntoLeaf(ln, key, value);
+            }
+            else if (n is InternalNode<TKey, TVal> internalNode)
+            {
+                InsertIntoInternal(internalNode, key, value);
+            }
+        }
+        catch (OverfullNodeException e)
+        {
+
+            if (e.SourceNode is NewLeafNode<TKey, TVal> ln)
+            {
+                // Split and insert the pending key into the appropriate new leaf; no retry needed
+                SplitLeafNode(ln, key, value);
+                return;
+            }
+            else if (e.SourceNode is InternalNode<TKey, TVal> internalNode)
+            {
+                SplitInternalNode(internalNode);
+            }
+
+            // try again, now that there should be some room
+            Insert(key, value);
+        }
+    }
+
+    /// <summary>
+    ///   Searches for the node containing the specified key.
+    /// </summary>
+    /// <param name="key">
+    ///   The key to search for.
+    /// </param>
+    /// <returns>
+    ///   The node containing the key.
+    /// </returns>
+    public NewNode<TKey, TVal> Search(TKey key) => Root is null
+        ? throw new KeyNotFoundException($"Key {key} not found: tree is empty")
+        : FindNodeForKey(key, Root);
+
+    public IEnumerable<TKey> AllKeys()
+        => AllLeafNodes().SelectMany(ln => ln.K.Arr[..ln.Count]);
+
+    public IEnumerable<TKey> AllKeys(NewNode<TKey, TVal> n)
+    {
+        if (n is NewLeafNode<TKey, TVal>)
+        {
+            return n.K.Arr[..n.Count];
+        }
+
+        if (n is InternalNode<TKey, TVal> internalNode)
+            return AllLeafNodes().SelectMany(ln => ln.K.Arr[..ln.Count]);
+
+        return [];
+    }
+    public IEnumerable<TVal> AllItems()
+    {
+        return AllLeafNodes().SelectMany(x => x.V.Arr[..x.Count]);
+    }
+    #endregion Public interface
+
+    #region Node Manipulation
+
+    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey key, NewNode<TKey, TVal> leftChild,
+        NewNode<TKey, TVal> rightChild) =>
+        CreateNewInternalNode([key], [leftChild, rightChild]);
+
+    private InternalNode<TKey, TVal> CreateNewInternalNode(TKey[] keys, NewNode<TKey, TVal>[] children)
+    {
+        var node = new InternalNode<TKey, TVal>(keys, children, degree);
+        Nodes.Add(node);
+        return node;
+    }
+
+    private NewLeafNode<TKey, TVal> CreateNewLeafNode(TKey[] keys, TVal[] items)
+    {
+        var newIndex = Nodes.Count;
+        var n = new NewLeafNode<TKey, TVal>(degree, keys, items);
+        Nodes.Add(n);
+
+        return n;
+    }
+
+    private InternalNode<TKey, TVal> SplitInternalNode(InternalNode<TKey, TVal> nodeToSplit)
+    {
+        OnNodeSplitting(nodeToSplit);
+        // For internal node split, the separator (median) is MOVED UP to the parent
+        var divisionPoint = nodeToSplit.Count / 2;
+        var separator = nodeToSplit.K[divisionPoint];
+        var (nlo, nhi) = nodeToSplit.Split();
+        // Add the new nodes to the tree
+        Nodes.Add(nlo);
+        Nodes.Add(nhi);
+        var parent = nodeToSplit.ParentNode;
+        var keyForParent = separator;
+
+        if (parent is null)
+        {
+            // if the parent was null, then the leaf node was also the root, and we need to create a
+            // new parent to be the new root
+            parent = CreateNewInternalNode(keyForParent, nlo, nhi);
+            Nodes.Remove(nodeToSplit); // Remove the old root
+            Root = parent;
+            return parent;
+        }
+
+        // if parent is not null, perform move-up at the correct pointer index
+        // if parent is not null, perform move-up: left child stays at same pointer index
+        parent.P.ReplaceValue(nodeToSplit, nlo);
+        Nodes.Remove(nodeToSplit);
+
+        // If parent is full, split it now; after split, nlo's ParentNode will be updated
+        var targetParent = parent;
+        if (targetParent.K.IsFull)
+        {
+            targetParent = SplitInternalNode(targetParent);
+        }
+
+        // Ensure we insert adjacent to the left split child
+        if (!ReferenceEquals(targetParent, nlo.ParentNode))
+        {
+            targetParent = nlo.ParentNode;
+        }
+        var childIdx = targetParent.P.IndexOf(nlo);
+        targetParent.K.InsertAt(keyForParent, childIdx);
+        targetParent.P.InsertAt(nhi, childIdx + 1);
+        nhi.ParentNode = targetParent;
+        OnNodeSplit(nlo, nhi);
+        return targetParent;
+    }
+
+    private void SplitLeafNode(NewLeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
+    {
+        OnNodeSplitting(n);
+
+        var (nlo, nhi) = n.Split();
+        // Add the new nodes to the tree
+        Nodes.Add(nlo);
+        Nodes.Add(nhi);
+        var parent = n.ParentNode;
+
+        if (parent is null)
+        {
+            // if the parent was null, then the leaf node was also the root, and we need to create a
+            // new parent to be the new root
+            parent = CreateNewInternalNode(nhi.Min, nlo, nhi);
+            // For leaf splits, don't delete the separator from nhi
+            Nodes.Remove(n); // Remove the old root
+            Root = parent;
+            // Insert the new key into the appropriate child
+            if (newKey.CompareTo(nhi.Min) >= 0)
+            {
+                nhi.Insert(newKey, newItem);
+            }
+            else
+            {
+                nlo.Insert(newKey, newItem);
+            }
+            return;
+        }
+
+        // if parent is not null, then we need to perform the copy-up operation
+        parent!.P.ReplaceValue(n, nlo);
+        Nodes.Remove(n);
+        InsertIntoInternalNode(nhi.Min, parent, nhi);
+        // For leaf splits, don't delete the separator from nhi
+        // Insert the new key into the appropriate child
+        if (newKey.CompareTo(nhi.Min) >= 0)
+        {
+            nhi.Insert(newKey, newItem);
+        }
+        else
+        {
+            nlo.Insert(newKey, newItem);
+        }
+        /*
+        var parent = n.ParentNode;
+        var midPoint = degree / 2;
+        var nhi = CreateNewLeafNode(n.K.Arr[midPoint..], n.V.Arr[midPoint..]);
+        n.Count = midPoint;
+
+        // wire up the nodes
+        nhi.NextNode = n.NextNode;
+        nhi.PreviousNode = n;
+        n.NextNode = nhi;
+
+        // now insert key into one of the leaf nodes
+        if (newKey.CompareTo(nhi.K[0]) >= 0) // if newKey > all keys in low side node
+        {
+            nhi.Insert(newKey, newItem);
+        }
+        else
+        {
+            n.Insert(newKey, newItem);
+        }
+
+        // we don't create the parent node here. It gets created if the parent is full it's the
+        // responsibility of the parent's insert function to wire up parentage ids
+
+        // only if there is no parent should we create a parent here and wire it up
+        if (parent is null)
+        {
+            parent = CreateNewInternalNode(n.K[n.Count-1], n, nhi);
+            n.ParentNode = parent;
+            nhi.ParentNode = parent;
+            parent.ParentNode = null;
+
+            // by definition, as a leaf with no parent, this node must be the root
+            Root = parent;
+        }
+        else
+        {
+            // if the parent is not null, then we insert the new child into the parent, and let it
+            // work out the rest
+            nhi.ParentNode = parent;
+            var p = n.ParentNode as InternalNode<TKey, TVal>;
+            p.Insert(n.K[n.Count], nhi);
+        }
+
+        OnNodeSplit(n, nhi);
+        return parent as InternalNode<TKey, TVal>;
+        */
+    }
+
+    #endregion Node Manipulation
+
+    #region Search Helpers
+
+
+    private NewLeafNode<TKey, TVal> FindNodeForKey(TKey key, NewNode<TKey, TVal> n)
+    {
+        // the node for a key, is the first node whose highest key is greater than the given key.  K[i] > key => P[i] is the node
+        // Reminder - P[i] is a pointer to the leaf node containing the values less than or equal to K[i].
+        // If key is greater than the last key in the node, then P[KeysInUse+1] is the node reference to use.
+
+        return n switch
+        {
+            NewLeafNode<TKey, TVal> ln => ln,
+            InternalNode<TKey, TVal> internalNode => FindNodeForKey(key, GetChildNodeForKey(key, internalNode)),
+            _ => throw new InvalidOperationException($"Unknown node type: {n.GetType()}")
+        };
+    }
+
+    private NewNode<TKey, TVal> GetChildNodeForKey(TKey key, InternalNode<TKey, TVal> internalNode)
+    {
+        // Find the appropriate child node based on the key
+        // Keys are sorted. For each separator K[i]:
+        // - if key < K[i], go to P[i]
+        // - if key == K[i], go to P[i+1] (right partition)
+        // Otherwise continue scanning.
+        for (var i = 0; i < internalNode.Count; i++)
+        {
+            var cmp = key.CompareTo(internalNode.K[i]);
+            if (cmp < 0)
+            {
+                return internalNode.P[i];
+            }
+            if (cmp == 0)
+            {
+                return internalNode.P[i + 1];
+            }
+        }
+        // If key is greater than all keys, use the rightmost child
+        return internalNode.P[internalNode.Count];
+    }
+
+    private IEnumerable<NewLeafNode<TKey, TVal>> AllLeafNodes()
+    {
+        // Find the true leftmost leaf by descending from the root
+        if (Root is null)
+        {
+            yield break;
+        }
+
+        NewNode<TKey, TVal> cursor = Root;
+        while (cursor is InternalNode<TKey, TVal> i)
+        {
+            cursor = i.P[0];
+        }
+
+        var leaf = cursor as NewLeafNode<TKey, TVal>;
+        while (leaf != null)
+        {
+            yield return leaf;
+            leaf = leaf.NextNode as NewLeafNode<TKey, TVal>;
+        }
+    }
+
+
+    #endregion Search Helpers
+
+    #region Events
+
+    public event Action<NewNode<TKey, TVal>, NewNode<TKey, TVal>> NodeSplit;
+
+    public event Action<NewNode<TKey, TVal>> NodeSplitting;
+
+    protected virtual void OnNodeSplit(NewNode<TKey, TVal> nlo, NewNode<TKey, TVal> nhi)
+        => NodeSplit?.Invoke(nlo, nhi);
+
+    protected virtual void OnNodeSplitting(NewNode<TKey, TVal> node)
+            => NodeSplitting?.Invoke(node);
+
+    #endregion Events
 }
