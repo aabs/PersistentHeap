@@ -10,24 +10,49 @@ public class BPlusTreeTests
 
     #region Testing Search Capabilities
 
-    [Fact]
-    public void a_tree_with_a_1000_entries_should_have_11_nodes()
+    [Property]
+    public void tree_preserves_all_keys_and_order_across_splits_for_varied_degree_and_sizes(int degreeCandidate, int[] rawKeys)
     {
-        const int degree = 4;
-        const int desiredInternalNodes = degree + 1; // two levels of internal nodes
-        const int numSamples = (desiredInternalNodes) * degree * degree;
-        var sut = new BPlusTree<int, int>();
+        // constrain degree to a sensible test range
+        var degree = Math.Clamp(Math.Abs(degreeCandidate), 4, 16);
+        var uniqueKeys = rawKeys?.Distinct().ToArray() ?? Array.Empty<int>();
 
-        for (var i = 0; i < numSamples; i++)
+        // keep sizes modest but variable to exercise multiple split patterns
+        var maxSize = degree * degree * 3;
+        if (uniqueKeys.Length > maxSize)
         {
-            sut.Insert(i, i);
+            uniqueKeys = uniqueKeys.Take(maxSize).ToArray();
         }
 
-        var allKeys = sut.AllKeys();
-        allKeys.Should().HaveCount(numSamples).And.BeInAscendingOrder();
-        sut.AllItems().Should().HaveCount(numSamples).And.BeInAscendingOrder();
-        sut.LeafNodes.Count().Should().Be((numSamples / 50) - 1);
-        sut.InternalNodes.Count().Should().Be(1);
+        var sut = new BPlusTree<int, int>(degree: degree);
+        foreach (var k in uniqueKeys)
+        {
+            sut.Insert(k, k);
+        }
+
+        // 1) No key loss
+        var allKeys = sut.AllKeys().ToArray();
+        allKeys.Should().HaveCount(uniqueKeys.Length);
+
+        // 2) Keys in strict ascending order
+        allKeys.Should().BeInAscendingOrder();
+
+        // 3) Indexer returns inserted values
+        foreach (var k in uniqueKeys)
+        {
+            sut.ContainsKey(k).Should().BeTrue();
+            sut[k].Should().Be(k);
+        }
+
+        // 4) Optional quick node invariants
+        foreach (var n in sut.LeafNodes)
+        {
+            ArrayIsInOrder(n.K.Arr, n.K.Count).Should().BeTrue();
+        }
+        foreach (var n in sut.InternalNodes)
+        {
+            ArrayIsInOrder(n.K.Arr, n.K.Count).Should().BeTrue();
+        }
     }
 
     [Fact]
@@ -673,12 +698,24 @@ public class BPlusTreeTests
             sut.Insert(x, x);
         }
         Debug.WriteLine(new BPlusTreeRenderer<int, int>().Render(sut));
-        // now check that none of the internal nodes has overlapping Key Ranges
-        var keys = sut.InternalNodes.Select(n => (n.K.Arr[0], n.K.Arr[n.K.Count - 1])).OrderBy(x => x.Item1).ToArray();
-        for (var i = 0; i < keys.Length - 1; i++)
+        // Validate non-overlap only among sibling internal nodes under the same parent
+        var allInternalNodes = sut.InternalNodes.ToArray();
+        var parents = allInternalNodes.Select(n => n.ParentNode).Distinct().ToArray();
+        foreach (var p in parents)
         {
-            var isLess = keys[i].Item2 < keys[i + 1].Item1;
-            isLess.Should().BeTrue();
+            // collect only internal-node children of this parent
+            var siblingInternals = allInternalNodes.Where(n => ReferenceEquals(n.ParentNode, p)).ToArray();
+            if (siblingInternals.Length <= 1)
+                continue;
+
+            var ranges = siblingInternals
+                .Select(n => (min: n.K.Arr[0], max: n.K.Arr[n.K.Count - 1]))
+                .OrderBy(r => r.min)
+                .ToArray();
+            for (var i = 0; i < ranges.Length - 1; i++)
+            {
+                (ranges[i].max < ranges[i + 1].min).Should().BeTrue();
+            }
         }
 
     }

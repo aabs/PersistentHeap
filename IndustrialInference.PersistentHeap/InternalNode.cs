@@ -18,7 +18,7 @@ public class InternalNode<TKey, TVal> : NewNode<TKey, TVal>
             ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value, Degree);
             K.Count = value;
-            K.Count = value + 1;
+            P.Count = value + 1;
         }
     }
 
@@ -82,6 +82,7 @@ public class InternalNode<TKey, TVal> : NewNode<TKey, TVal>
         var idx = K.FindInsertionPoint(k); // this will be the point of insertion into both K and P
         K.InsertAt(k, idx);
         P.InsertAt(n, idx + 1);
+        n.ParentNode = this;
     }
 
     // k is the key that has been pulled-up (in the case of an internal node) or copied up (in the

@@ -184,7 +184,9 @@ public class BPlusTree<TKey, TVal>
         {
             if (e.SourceNode is InternalNode<TKey, TVal> internalNode)
             {
-                SplitInternalNode(internalNode);
+                // Split the full internal node and then retry insertion into the resulting parent
+                var parentAfterSplit = SplitInternalNode(internalNode);
+                InsertIntoInternalNode(key, parentAfterSplit, nodeToInsert);
             }
         }
     }
@@ -210,7 +212,10 @@ public class BPlusTree<TKey, TVal>
     public void InsertIntoInternal(InternalNode<TKey, TVal> n, TKey key, TVal value)
     {
         var idx = n.K.FindInsertionPoint(key);
-        Insert(key, value, n.P[idx]);
+        var childIndex = (idx < n.Count && key.CompareTo(n.K[idx]) == 0)
+            ? idx + 1 // equality goes to the right partition
+            : idx;
+        Insert(key, value, n.P[childIndex]);
     }
 
     public void Insert(TKey key, TVal value, NewNode<TKey, TVal> n)
@@ -231,7 +236,9 @@ public class BPlusTree<TKey, TVal>
 
             if (e.SourceNode is NewLeafNode<TKey, TVal> ln)
             {
+                // Split and insert the pending key into the appropriate new leaf; no retry needed
                 SplitLeafNode(ln, key, value);
+                return;
             }
             else if (e.SourceNode is InternalNode<TKey, TVal> internalNode)
             {
@@ -256,7 +263,8 @@ public class BPlusTree<TKey, TVal>
         ? throw new KeyNotFoundException($"Key {key} not found: tree is empty")
         : FindNodeForKey(key, Root);
 
-    public IEnumerable<TKey> AllKeys() => AllKeys(Root);
+    public IEnumerable<TKey> AllKeys()
+        => AllLeafNodes().SelectMany(ln => ln.K.Arr[..ln.Count]);
 
     public IEnumerable<TKey> AllKeys(NewNode<TKey, TVal> n)
     {
@@ -266,9 +274,7 @@ public class BPlusTree<TKey, TVal>
         }
 
         if (n is InternalNode<TKey, TVal> internalNode)
-        {
-            return internalNode.P.Arr.SelectMany(AllKeys);
-        }
+            return AllLeafNodes().SelectMany(ln => ln.K.Arr[..ln.Count]);
 
         return [];
     }
@@ -303,30 +309,49 @@ public class BPlusTree<TKey, TVal>
     private InternalNode<TKey, TVal> SplitInternalNode(InternalNode<TKey, TVal> nodeToSplit)
     {
         OnNodeSplitting(nodeToSplit);
+        // For internal node split, the separator (median) is MOVED UP to the parent
+        var divisionPoint = nodeToSplit.Count / 2;
+        var separator = nodeToSplit.K[divisionPoint];
         var (nlo, nhi) = nodeToSplit.Split();
         // Add the new nodes to the tree
         Nodes.Add(nlo);
         Nodes.Add(nhi);
         var parent = nodeToSplit.ParentNode;
-        var keyForParent = nhi.Min;
+        var keyForParent = separator;
 
         if (parent is null)
         {
             // if the parent was null, then the leaf node was also the root, and we need to create a
             // new parent to be the new root
             parent = CreateNewInternalNode(keyForParent, nlo, nhi);
-            nhi.Delete(keyForParent);
             Nodes.Remove(nodeToSplit); // Remove the old root
             Root = parent;
             return parent;
         }
 
-        // if parent is not null, then we need to perform the copy-up operation
-        parent!.P.ReplaceValue(nodeToSplit, nlo);
+        // if parent is not null, perform move-up at the correct pointer index
+        // if parent is not null, perform move-up: left child stays at same pointer index
+        parent.P.ReplaceValue(nodeToSplit, nlo);
         Nodes.Remove(nodeToSplit);
-        InsertIntoInternalNode(keyForParent, parent, nhi);
+
+        // If parent is full, split it now; after split, nlo's ParentNode will be updated
+        var targetParent = parent;
+        if (targetParent.K.IsFull)
+        {
+            targetParent = SplitInternalNode(targetParent);
+        }
+
+        // Ensure we insert adjacent to the left split child
+        if (!ReferenceEquals(targetParent, nlo.ParentNode))
+        {
+            targetParent = nlo.ParentNode;
+        }
+        var childIdx = targetParent.P.IndexOf(nlo);
+        targetParent.K.InsertAt(keyForParent, childIdx);
+        targetParent.P.InsertAt(nhi, childIdx + 1);
+        nhi.ParentNode = targetParent;
         OnNodeSplit(nlo, nhi);
-        return parent;
+        return targetParent;
     }
 
     private void SplitLeafNode(NewLeafNode<TKey, TVal> n, TKey newKey, TVal newItem)
@@ -444,39 +469,45 @@ public class BPlusTree<TKey, TVal>
     private NewNode<TKey, TVal> GetChildNodeForKey(TKey key, InternalNode<TKey, TVal> internalNode)
     {
         // Find the appropriate child node based on the key
-        // Keys are sorted, so find the first key that is greater than or equal to the search key
-        for (int i = 0; i < internalNode.Count; i++)
+        // Keys are sorted. For each separator K[i]:
+        // - if key < K[i], go to P[i]
+        // - if key == K[i], go to P[i+1] (right partition)
+        // Otherwise continue scanning.
+        for (var i = 0; i < internalNode.Count; i++)
         {
-            if (key.CompareTo(internalNode.K[i]) <= 0)
+            var cmp = key.CompareTo(internalNode.K[i]);
+            if (cmp < 0)
             {
                 return internalNode.P[i];
+            }
+            if (cmp == 0)
+            {
+                return internalNode.P[i + 1];
             }
         }
         // If key is greater than all keys, use the rightmost child
         return internalNode.P[internalNode.Count];
     }
 
-    IEnumerable<NewLeafNode<TKey, TVal>> AllLeafNodes()
+    private IEnumerable<NewLeafNode<TKey, TVal>> AllLeafNodes()
     {
-        var firstLeafNode = LeafNodes.FirstOrDefault(n => n.PreviousNode == null);
-
-        if (firstLeafNode != null)
+        // Find the true leftmost leaf by descending from the root
+        if (Root is null)
         {
-            var currentNode = firstLeafNode;
+            yield break;
+        }
 
-            while (currentNode != null)
-            {
-                yield return currentNode;
+        NewNode<TKey, TVal> cursor = Root;
+        while (cursor is InternalNode<TKey, TVal> i)
+        {
+            cursor = i.P[0];
+        }
 
-                if (currentNode.NextNode != null)
-                {
-                    currentNode = currentNode.NextNode as NewLeafNode<TKey, TVal>;
-                }
-                else
-                {
-                    break;
-                }
-            }
+        var leaf = cursor as NewLeafNode<TKey, TVal>;
+        while (leaf != null)
+        {
+            yield return leaf;
+            leaf = leaf.NextNode as NewLeafNode<TKey, TVal>;
         }
     }
 

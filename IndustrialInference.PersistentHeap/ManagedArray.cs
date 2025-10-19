@@ -90,7 +90,12 @@ public class ManagedArray<T>
         ArgumentOutOfRangeException.ThrowIfGreaterThan(deletionPoint, Count);
         BPlusTreeException.ThrowIf(Count == 0, "Cannot delete from empty array");
 
-        Array.Copy(Arr, deletionPoint + 1, Arr, deletionPoint, Arr.Length - (deletionPoint + 1));
+        // Shift only the active segment (Count) left by one, not the entire capacity
+        var elementsToMove = (Count - 1) - deletionPoint;
+        if (elementsToMove > 0)
+        {
+            Array.Copy(Arr, deletionPoint + 1, Arr, deletionPoint, elementsToMove);
+        }
         Arr[Count - 1] = default(T);
         Count -= 1;
     }
