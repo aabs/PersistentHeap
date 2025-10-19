@@ -454,26 +454,58 @@ public class BPlusTree<TKey, TVal>
 
     private NewLeafNode<TKey, TVal> FindNodeForKey(TKey key, NewNode<TKey, TVal> n)
     {
-        // the node for a key, is the first node whose highest key is greater than the given key.  K[i] > key => P[i] is the node
-        // Reminder - P[i] is a pointer to the leaf node containing the values less than or equal to K[i].
-        // If key is greater than the last key in the node, then P[KeysInUse+1] is the node reference to use.
+        // Iterative, cycle-safe descent to a leaf for the provided key.
+        // The target child selection rule is:
+        //   - if key < K[i], descend to P[i]
+        //   - if key == K[i], descend to P[i+1] (right partition)
+        //   - if key > all K, descend to P[Count]
 
-        return n switch
+        var guardCounter = 0;
+        const int maxDepth = 1_000_000; // generous guard to prevent runaway loops if corruption occurs
+
+        var current = n;
+        while (true)
         {
-            NewLeafNode<TKey, TVal> ln => ln,
-            InternalNode<TKey, TVal> internalNode => FindNodeForKey(key, GetChildNodeForKey(key, internalNode)),
-            _ => throw new InvalidOperationException($"Unknown node type: {n.GetType()}")
-        };
+            // Safety guard for corrupted graphs (cycles/self-pointers)
+            if (guardCounter++ > maxDepth)
+            {
+                throw new StackOverflowException("Cycle detected during B+Tree descent: exceeded maximum traversal depth.");
+            }
+
+            if (current is NewLeafNode<TKey, TVal> leaf)
+            {
+                return leaf;
+            }
+
+            if (current is not InternalNode<TKey, TVal> internalNode)
+            {
+                throw new InvalidOperationException($"Unknown node type: {current.GetType()}");
+            }
+
+            var next = GetChildNodeForKey(key, internalNode);
+
+            // Defensive: avoid self-cycles or null children
+            if (ReferenceEquals(next, current) || next is null)
+            {
+                throw new InvalidOperationException("Invalid B+Tree structure: child selection produced a null or self-referential pointer.");
+            }
+
+            current = next;
+        }
     }
 
     private NewNode<TKey, TVal> GetChildNodeForKey(TKey key, InternalNode<TKey, TVal> internalNode)
     {
-        // Find the appropriate child node based on the key
-        // Keys are sorted. For each separator K[i]:
-        // - if key < K[i], go to P[i]
-        // - if key == K[i], go to P[i+1] (right partition)
-        // Otherwise continue scanning.
-        for (var i = 0; i < internalNode.Count; i++)
+        // Defensive consistency: P should have Count+1 usable entries
+        var keyCount = internalNode.Count;
+        var ptrCount = internalNode.P.Count;
+        if (ptrCount < keyCount + 1)
+        {
+            // Invariant breach indicates structural corruption; fail fast
+            throw new InvalidOperationException($"Internal node pointer count ({ptrCount}) is inconsistent with key count ({keyCount}).");
+        }
+
+        for (var i = 0; i < keyCount; i++)
         {
             var cmp = key.CompareTo(internalNode.K[i]);
             if (cmp < 0)
@@ -486,7 +518,7 @@ public class BPlusTree<TKey, TVal>
             }
         }
         // If key is greater than all keys, use the rightmost child
-        return internalNode.P[internalNode.Count];
+        return internalNode.P[keyCount];
     }
 
     private IEnumerable<NewLeafNode<TKey, TVal>> AllLeafNodes()

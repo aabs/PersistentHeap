@@ -1,50 +1,117 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: N/A → 1.0.0
+- Modified principles: N/A (initial ratification)
+- Added sections: Engineering Constraints & Standards; Development Workflow & Quality Gates
+- Removed sections: None
+- Templates requiring updates:
+	✅ .specify/templates/plan-template.md
+	✅ .specify/templates/spec-template.md
+	✅ .specify/templates/tasks-template.md
+	⚠ Pending: .specify/templates/commands/* (no command templates found; verify when added)
+- Follow-up TODOs: None
+-->
+
+# Persistent Heap Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Correctness First via Property-Based Testing (NON-NEGOTIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- All new behaviors MUST be specified as properties and tested with property-based tests.
+- Example and unit tests MAY exist, but property-based tests are the primary safety net.
+- Bug fixes MUST add a failing property that reproduces the defect before the fix.
+- Randomized generators MUST include shrinking so minimal counterexamples are reported.
+- Properties MUST assert B+Tree invariants (ordering, partitioning, determinism) where relevant.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Rationale: The data structure admits a vast input space; properties provide broader coverage and
+catch subtle invariant violations beyond curated examples.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Performance as a Contract (after correctness)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- Performance regressions MUST be measured. Benchmark harnesses (BenchmarkDotNet) are authoritative.
+- PRs with potential perf impact MUST include an updated benchmark comparison vs. the latest baseline.
+- Default tolerance: up to 5% degradation allowed without justification; anything beyond MUST include
+either a mitigation or a clear rationale and a follow-up task to recover.
+- Algorithmic guarantees (e.g., O(log n) ops) MUST be preserved; hot paths SHOULD minimize allocations.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: The project targets high-performance persistent data structures; after correctness,
+throughput and latency are the key quality attributes.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. B+Tree Invariants are Enforced, Observable, and Testable
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- Leaf keys MUST be strictly ascending; internal key ranges MUST be disjoint and correctly partition
+	child subtrees.
+- Search path selection MUST follow: key < K[i] → P[i]; key == K[i] → P[i+1]; else scan right; rightmost
+	child selected when key exceeds all K.
+- Splits MUST preserve order and parent/child relationships; leaf splits COPY UP the separator, internal
+	splits MOVE UP the separator (as implemented).
+- The linked list of leaves MUST iterate all keys in-order.
+- Public operations MUST be deterministic for a given input sequence.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Rationale: These invariants define the structure’s correctness and are already reflected in tests and
+implementation; the constitution makes them non-negotiable contracts.
+
+### IV. API Stability and Simplicity
+
+- Public surface SHOULD remain minimal and generic: BPlusTree<TKey, TVal> with TKey : IComparable<TKey>.
+- Breaking API changes MUST be justified with migration notes and scheduled for a major release of the
+	library.
+- Unsafe or low-level optimizations are permitted but MUST be documented and covered by properties.
+
+Rationale: Focus on a clear, composable core that can be optimized without churn for users.
+
+### V. Observability and Reproducibility
+
+- Development-time hooks (e.g., NodeSplitting/NodeSplit events) SHOULD be used for invariant validation
+	in tests and debugging output.
+- Property-based tests MUST support deterministic reproduction (record seeds/counterexamples in failures).
+- Benchmarks MUST capture environment and parameters in output; significant differences MUST be called out
+	in PRs.
+
+Rationale: Fast diagnosis and repeatability reduce MTTR and improve developer velocity.
+
+## Engineering Constraints & Standards
+
+- Language/Runtime: .NET (targeting net9.0+ as per project files). Nullable enabled. Unsafe allowed.
+- Testing: xUnit (facts) + property-based testing (e.g., FsCheck) + FluentAssertions for clarity.
+- Benchmarking: BenchmarkDotNet; store results alongside code and reference deltas in PRs.
+- Data structure invariants (non-exhaustive) to encode as properties and/or assertions:
+	- Keys in each leaf strictly increasing; leaf traversal yields a strictly increasing global sequence.
+	- Internal node child ranges are non-overlapping and cover all keys under that parent.
+	- Duplicate inserts replace prior value without changing count.
+	- Deletions remove a single mapping and adjust count accordingly; unknown deletes throw.
+	- Search/indexer throws on empty tree or missing key as appropriate.
+- Performance guidance:
+	- Avoid unnecessary allocations and copying in hot paths; prefer contiguous arrays and reuse where safe.
+	- Splits should minimize data movement; verify via microbenchmarks for typical and worst-case patterns.
+	- Track p50/p95/p99 latencies for representative sizes; maintain historical baselines.
+
+## Development Workflow & Quality Gates
+
+- Properties-first workflow: write/extend a property → observe failure (red) → implement/minimize → pass (green)
+	→ refactor with properties unchanged.
+- Quality gates for PRs:
+	1) Property-based tests present for new/changed behavior and all pass locally/CI.
+	2) Core invariants covered by properties remain satisfied (no flaky properties allowed).
+	3) Benchmark delta provided when perf could be affected; degradation >5% requires explicit approval.
+	4) Public API changes documented with rationale and migration notes (if applicable).
+- Plans/specs/tasks MUST include a “Constitution Check” mapping changes to the above gates.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes other informal practices. Non-compliant changes MUST include an exception
+	rationale and a plan to return to compliance.
+- Amendment procedure:
+	- Propose via PR updating this file with a Sync Impact Report summarizing changes and template impacts.
+	- Reviewers verify alignment across plan/spec/tasks templates and README or other guidance.
+	- Upon merge, update LAST_AMENDED_DATE and bump version per rules below.
+- Versioning policy for this constitution:
+	- MAJOR: Backward-incompatible shifts to principles or governance.
+	- MINOR: New principles/sections or materially expanded guidance.
+	- PATCH: Clarifications/typos with no behavioral/governance change.
+- Compliance review expectations:
+	- Code review MUST explicitly check Constitution Check sections in plans/specs/tasks.
+	- CI SHOULD run properties and fast benchmarks where feasible; full benchmarks MAY run on a schedule.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-10-19 | **Last Amended**: 2025-10-19

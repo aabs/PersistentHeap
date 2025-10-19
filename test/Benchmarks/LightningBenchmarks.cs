@@ -4,28 +4,37 @@ using System.Runtime.InteropServices;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Diagnosers;
 using LightningDB;
 using StructPacker;
 
-[SimpleJob(RuntimeMoniker.Net60, baseline: true)]
-[RPlotExporter]
+[SimpleJob(RuntimeMoniker.Net90, baseline: true)]
+[MemoryDiagnoser]
 public class LightningBenchmark
 {
-    private LightningEnvironment env;
-    private Random r;
+    private LightningEnvironment env = null!;
+    private Random r = null!;
 
     [Params(1, 10, 100)]
 #pragma warning disable IDE1006 // Naming Styles
     public int N;
 #pragma warning restore IDE1006 // Naming Styles
 
-    private LightningTransaction tx;
-    private LightningDatabase db;
+    private LightningTransaction tx = null!;
+    private LightningDatabase db = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        env = new LightningEnvironment("pathtofolder");
+        var enabled = Environment.GetEnvironmentVariable("RUN_LMDB_BENCHMARKS");
+        if (string.IsNullOrEmpty(enabled))
+        {
+            // Skip setup so this benchmark can be filtered out; throws a clear message if accidentally run
+            throw new InvalidOperationException("RUN_LMDB_BENCHMARKS not set. Skipping LMDB benchmarks.");
+        }
+        var path = Path.Combine(Path.GetTempPath(), "lmdb-bench");
+        Directory.CreateDirectory(path);
+        env = new LightningEnvironment(path);
         env.MaxDatabases = 2;
         env.Open();
         r = new Random(29);

@@ -7,7 +7,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Property-based tests are the primary safety net and SHOULD be included for all new/changed behavior.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -64,6 +64,8 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T006 [P] Setup API routing and middleware structure
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
+- [ ] T008a Add property-based testing harness and generators (FsCheck/xUnit integration)
+- [ ] T008b Setup BenchmarkDotNet baseline job and CI-friendly run
 - [ ] T009 Setup environment configuration management
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
@@ -76,12 +78,13 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Property Tests for User Story 1
 
-**NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+NOTE: Write these properties FIRST, ensure they FAIL before implementation
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [US1] Property tests asserting invariants in tests/property/[name]Properties.cs
+- [ ] T011 [P] [US1] Example-based tests for critical examples in tests/unit/[name]Tests.cs
+- [ ] T011a [US1] Update or add benchmarks in test/Benchmarks/[Name]Benchmark.cs and capture baseline
 
 ### Implementation for User Story 1
 
@@ -102,10 +105,11 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Property Tests for User Story 2
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T018 [P] [US2] Property tests asserting invariants in tests/property/[name]Properties.cs
+- [ ] T019 [P] [US2] Example-based tests in tests/unit/[name]Tests.cs
+- [ ] T019a [US2] Update benchmarks and compare against baseline (±5% tolerance)
 
 ### Implementation for User Story 2
 
@@ -124,10 +128,11 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Property Tests for User Story 3
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T024 [P] [US3] Property tests asserting invariants in tests/property/[name]Properties.cs
+- [ ] T025 [P] [US3] Example-based tests in tests/unit/[name]Tests.cs
+- [ ] T025a [US3] Update benchmarks and compare against baseline (±5% tolerance)
 
 ### Implementation for User Story 3
 
@@ -149,7 +154,7 @@ Examples of foundational tasks (adjust based on your project):
 
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
-- [ ] TXXX Performance optimization across all stories
+- [ ] TXXX Performance optimization across all stories (confirm benchmark improvements/regressions)
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation

@@ -29,9 +29,14 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.
 
-[Gates determined based on constitution file]
+- Properties-first: Describe the properties that will validate new/changed behavior. Include invariants and
+  counterexample expectations. Name property test files.
+- Performance impact: If code touches hot paths or algorithms, state expected perf impact and how it will be
+  measured (BenchmarkDotNet). Include baseline reference and acceptable tolerance (default 5%).
+- API stability: Note any public API changes and proposed migration notes (or "None").
+- Observability: Identify any debug hooks/events or logs needed for diagnosis and reproduction.
 
 ## Project Structure
 

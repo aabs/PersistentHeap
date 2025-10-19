@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing (mandatory)
 
 <!--
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
@@ -65,13 +65,15 @@
 
 [Add more user stories as needed, each with an assigned priority]
 
-### Edge Cases
+### Properties and Edge Cases
 
 <!--
   ACTION REQUIRED: The content in this section represents placeholders.
   Fill them out with the right edge cases.
 -->
 
+- Define properties that MUST hold for the feature (state invariants, ordering, determinism, idempotence).
+- List generators and shrinking strategies for randomized inputs.
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
@@ -100,7 +102,7 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
-## Success Criteria *(mandatory)*
+## Success Criteria (mandatory)
 
 <!--
   ACTION REQUIRED: Define measurable success criteria.
@@ -109,8 +111,8 @@
 
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
+- **SC-001**: Properties covering [list invariants] exist and pass in CI (no flakes for 100 consecutive runs).
+- **SC-002**: Performance meets or exceeds baseline within ±5% tolerance for [relevant benchmarks].
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
 
