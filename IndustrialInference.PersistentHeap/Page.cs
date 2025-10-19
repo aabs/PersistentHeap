@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿namespace IndustrialInference.BPlusTree;
 
-namespace IndustrialInference.BPlusTree;
+using System.Diagnostics;
+using System.Text;
 
 [DebuggerDisplay("{ToString(), nq}")]
 public class Page<TKey> where TKey : IComparable<TKey>
@@ -67,7 +67,8 @@ public class Page<TKey> where TKey : IComparable<TKey>
     public void Add(KeyPtr<TKey> key)
     {
         Debug.Assert(IsExternal);
-        if (IsFull) throw new ApplicationException("cannot add entry to full page");
+        if (IsFull)
+            throw new ApplicationException("cannot add entry to full page");
         if (Options.AllowDuplicates && Contains(key.Key))
         {
             return;
@@ -85,7 +86,8 @@ public class Page<TKey> where TKey : IComparable<TKey>
     /// <exception cref="ApplicationException">if the page is full adding will fail</exception>
     public void Add(Page<TKey> page)
     {
-        if (IsFull) throw new ApplicationException("cannot add page to full page");
+        if (IsFull)
+            throw new ApplicationException("cannot add page to full page");
         Debug.Assert(!IsExternal);
         var smallestKeyInPage = page.Body[0].Key;
         Body[Entries++] = new KeyPtr<TKey>(smallestKeyInPage, page.Location);
@@ -106,7 +108,8 @@ public class Page<TKey> where TKey : IComparable<TKey>
     public bool Contains(TKey key)
     {
         var x = Body.BinarySearch(Entries, key, kp => kp.Key);
-        if (x < 0) return false;
+        if (x < 0)
+            return false;
         return true;
         //for (int i = 0; i < Entries; i++)
         //{
@@ -118,7 +121,8 @@ public class Page<TKey> where TKey : IComparable<TKey>
     public Page<TKey> Next(TKey key)
     {
         int i = Entries - 1;
-        while (Cmp(Body[i].Key, key) > 0) i++;
+        while (Cmp(Body[i].Key, key) > 0)
+            i++;
         return pageManager.Lookup(Body[i].Ptr);
     }
 
@@ -147,7 +151,8 @@ public class Page<TKey> where TKey : IComparable<TKey>
             for (int i = 0; i < Entries; i++)
             {
                 var kp = Body[i];
-                sb.Append(sep); sep = " | ";
+                sb.Append(sep);
+                sep = " | ";
                 sb.Append(kp);
             }
             sb.Append(']');

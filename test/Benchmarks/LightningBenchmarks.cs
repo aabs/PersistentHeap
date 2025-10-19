@@ -1,12 +1,11 @@
+namespace Benchmarks;
+
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using LightningDB;
 using StructPacker;
-
-namespace Benchmarks;
 
 [SimpleJob(RuntimeMoniker.Net60, baseline: true)]
 [RPlotExporter]
@@ -100,7 +99,7 @@ public class LightningBenchmark
     [Pack]
     public struct ContentsBlock
     {
-        public ContentsBlock(){}
+        public ContentsBlock() { }
         public ContentsBlock(int version, int soIndexBlockName)
         {
             Version = version;

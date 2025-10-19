@@ -1,8 +1,8 @@
+namespace PersistentHeap.Tests;
+
 using IndustrialInference.PersistentHeap.Old;
 using System;
 using System.Linq;
-
-namespace PersistentHeap.Tests;
 
 
 public class StorageTests

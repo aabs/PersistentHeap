@@ -1,7 +1,7 @@
-﻿using System.Buffers;
-using System.Runtime.InteropServices;
+﻿namespace IndustrialInference.PersistentHeap.Old;
 
-namespace IndustrialInference.PersistentHeap.Old;
+using System.Buffers;
+using System.Runtime.InteropServices;
 
 public interface IStorage
 {
@@ -28,7 +28,8 @@ public class ByteStorage : IStorage
 
     public ByteStorage(int size)
     {
-        if (0 < size && size <= MaxBufferSize) Buf = new byte[size];
+        if (0 < size && size <= MaxBufferSize)
+            Buf = new byte[size];
     }
 
     public byte[] Buf { get; }
@@ -38,7 +39,8 @@ public class ByteStorage : IStorage
         get => Buf[i];
         set
         {
-            if (i.Start.Value + value.Length > Buf.Length) throw new ArgumentOutOfRangeException(nameof(value));
+            if (i.Start.Value + value.Length > Buf.Length)
+                throw new ArgumentOutOfRangeException(nameof(value));
             Array.Copy(value, 0, Buf, i.Start.Value, value.Length);
         }
     }
@@ -98,7 +100,8 @@ public sealed unsafe class UnmanagedMemoryManager<T> : MemoryManager<T>
     [CLSCompliant(false)]
     public UnmanagedMemoryManager(T* pointer, int length)
     {
-        if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
+        if (length < 0)
+            throw new ArgumentOutOfRangeException(nameof(length));
         _pointer = pointer;
         _length = length;
     }
